@@ -1,0 +1,90 @@
+data "aws_availability_zones" "available" {}
+
+resource "aws_vpc" "this" {
+  cidr_block = var.vpc_cidr
+  tags       = { Name = "DevPilot-VPC" }
+}
+
+# 2 subnets públicas (/25 cada una)
+resource "aws_subnet" "public" {
+  count             = 2
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = cidrsubnet(var.public_subnet_cidr, 1, count.index)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+  tags = { Name = "DevPilot-Public-Subnet-${count.index}" }
+}
+
+# 2 subnets privadas (/25 cada una)
+resource "aws_subnet" "private" {
+  count             = 2
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = cidrsubnet(var.private_subnet_cidr, 1, count.index)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = { Name = "DevPilot-Private-Subnet-${count.index}" }
+}
+
+resource "aws_security_group" "sg_web" {
+  name        = "DevPilot-SG-Web"
+  description = "SSH limitado, HTTP/HTTPS"
+  vpc_id      = aws_vpc.this.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_office_ip]
+  }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = { Name = "DevPilot-SG-Web" }
+}
+
+resource "aws_security_group" "sg_db" {
+  name        = "DevPilot-SG-DB"
+  description = "Acceso a PostgreSQL solo desde SG-Web"
+  vpc_id      = aws_vpc.this.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_web.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = { Name = "DevPilot-SG-DB" }
+}
+
+output "public_subnet_ids" {
+  value = aws_subnet.public[*].id
+}
+output "private_subnet_ids" {
+  value = aws_subnet.private[*].id
+}
+output "sg_web_id" {
+  value = aws_security_group.sg_web.id
+}
+output "sg_db_id" {
+  value = aws_security_group.sg_db.id
+}

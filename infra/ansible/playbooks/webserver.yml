@@ -1,0 +1,128 @@
+---
+- name: Configurar EC2 para DevPilot (Flask + React)
+  hosts: web
+  become: true
+
+  vars:
+    app_root: /home/ubuntu/DevPilot
+    backend_dir: "{{ app_root }}/Backend"
+    frontend_dir: "{{ app_root }}/Frontend"
+    venv_dir: "{{ backend_dir }}/venv"
+
+  tasks:
+    - name: Instalar paquetes del sistema
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+          - git
+          - nginx
+          - nodejs
+          - npm
+        update_cache: yes
+        state: latest
+
+    - name: Clonar repositorio DevPilot
+      git:
+        repo: 'https://github.com/ProjectLabTeam2/DevPilot.git'
+        dest: "{{ app_root }}"
+        version: main
+        force: yes
+
+    - name: Crear virtualenv e instalar dependencias Python
+      shell: |
+        cd {{ backend_dir }}
+        python3 -m venv venv
+        . venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+      args:
+        creates: "{{ venv_dir }}/bin/activate"
+
+    - name: Copiar archivo .env al servidor
+      copy:
+        dest: "{{ backend_dir }}/.env"
+        content: |
+          FLASK_ENV=production
+          SECRET_KEY={{ lookup('env','SECRET_KEY') }}
+          JWT_SECRET_KEY={{ lookup('env','JWT_SECRET_KEY') }}
+          DB_HOST={{ lookup('env','RDS_ENDPOINT') }}
+          DB_USER={{ lookup('env','DB_USER') }}
+          DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
+          DB_NAME=devpilotdb
+
+    - name: Construir frontend con npm
+      shell: |
+        cd {{ frontend_dir }}
+        npm ci
+        npm run build
+      args:
+        creates: "{{ frontend_dir }}/dist"
+
+    - name: Configurar Nginx para servir la app
+      copy:
+        dest: /etc/nginx/sites-available/devpilot
+        content: |
+          server {
+              listen 80;
+              server_name _;
+              root {{ frontend_dir }}/dist;
+              index index.html;
+
+              location /api/ {
+                  proxy_pass http://127.0.0.1:5000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+              }
+
+              location / {
+                  try_files $uri $uri/ /index.html;
+              }
+          }
+      notify:
+        - Enable Nginx site
+
+    - name: Disable default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify:
+        - Reload Nginx
+
+    - name: Create systemd service for Gunicorn
+      copy:
+        dest: /etc/systemd/system/gunicorn.service
+        content: |
+          [Unit]
+          Description=Gunicorn for DevPilot
+          After=network.target
+
+          [Service]
+          User=ubuntu
+          WorkingDirectory={{ backend_dir }}
+          EnvironmentFile={{ backend_dir }}/.env
+          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - Reload systemd
+
+  handlers:
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/devpilot
+        dest: /etc/nginx/sites-enabled/devpilot
+        state: link
+
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+        name: gunicorn
+        state: restarted
+        enabled: yes
