@@ -26,7 +26,6 @@ pipeline {
         dir("${env.TF_WORKDIR}") {
           sh 'terraform init'
           sh 'terraform plan -out=devpilot.plan'
-          // Guardar log en artifact o gist manual
         }
       }
     }

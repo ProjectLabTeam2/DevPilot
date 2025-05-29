@@ -49,7 +49,7 @@
           DB_HOST={{ lookup('env','RDS_ENDPOINT') }}
           DB_USER={{ lookup('env','DB_USER') }}
           DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
-          DB_NAME=devpilotdb
+          DB_NAME=devpilot-db
 
     - name: Construir frontend con npm
       shell: |

@@ -1,14 +1,12 @@
 import axios from 'axios';
 
-// Crear instancia de axios con configuración base
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor para agregar el token en cada petición
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -22,15 +20,12 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores de respuesta
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expirado o inválido
       localStorage.removeItem('token');
       delete api.defaults.headers.common['Authorization'];
-      // Redirigir al login si no estamos ya ahí
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
