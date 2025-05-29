@@ -1,5 +1,5 @@
 resource "aws_instance" "app" {
-  ami                         = "ami-084568db4383264d4" 
+  ami                         = "ami-084568db4383264d4"  # Ubuntu 20.04 LTS
   instance_type               = "t2.micro"
   key_name                    = var.key_name
   subnet_id                   = var.public_subnet_id
@@ -9,6 +9,15 @@ resource "aws_instance" "app" {
   tags = { Name = "DevPilot-App-EC2" }
 }
 
+resource "aws_eip" "app_eip" {
+  instance    = aws_instance.app.id
+  domain      = "vpc"
+}
+
 output "public_ip" {
-  value = aws_instance.app.public_ip
+  value = aws_eip.app_eip.public_ip
+}
+
+output "eip" {
+  value = aws_eip.app_eip.public_ip
 }
