@@ -31,12 +31,12 @@
 
     - name: Crear virtualenv e instalar dependencias Python
       shell: |
-        cd {{ backend_dir }}
         python3 -m venv venv
         . venv/bin/activate
         pip install --upgrade pip
         pip install -r requirements.txt
       args:
+        chdir: "{{ backend_dir }}"
         creates: "{{ venv_dir }}/bin/activate"
 
     - name: Copiar archivo .env al servidor
@@ -51,19 +51,50 @@
           DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
           DB_NAME=devpilot-db
 
-    - name: Exportar variables de entorno para Flask
+    - name: Exportar FLASK_APP y FLASK_ENV para sesiones futuras
       shell: |
         echo "export FLASK_APP=run.py" >> ~/.bashrc
         echo "export FLASK_ENV=production" >> ~/.bashrc
 
-    - name: Ejecutar flask db init, migrate y upgrade
+    - name: Ejecutar flask db init
       shell: |
-        cd {{ backend_dir }}
-        . venv/bin/activate
-        export FLASK_APP=run.py
+        . {{ venv_dir }}/bin/activate && \
+        export FLASK_APP=run.py && \
         flask db init || echo "Ya existe migrations/"
+      args:
+        chdir: "{{ backend_dir }}"
+      environment:
+        FLASK_ENV: production
+        SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') }}"
+        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') }}"
+        DB_USER: "{{ lookup('env','DB_USER') }}"
+        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') }}"
+        DB_NAME: devpilot-db
+
+    - name: Ejecutar flask db migrate
+      shell: |
+        . {{ venv_dir }}/bin/activate && \
+        export FLASK_APP=run.py && \
         flask db migrate -m "Initial migration"
+      args:
+        chdir: "{{ backend_dir }}"
+      environment:
+        FLASK_ENV: production
+        SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') }}"
+        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') }}"
+        DB_USER: "{{ lookup('env','DB_USER') }}"
+        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') }}"
+        DB_NAME: devpilot-db
+
+    - name: Ejecutar flask db upgrade
+      shell: |
+        . {{ venv_dir }}/bin/activate && \
+        export FLASK_APP=run.py && \
         flask db upgrade
+      args:
+        chdir: "{{ backend_dir }}"
       environment:
         FLASK_ENV: production
         SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
@@ -75,10 +106,10 @@
 
     - name: Construir frontend con npm
       shell: |
-        cd {{ frontend_dir }}
         npm ci
         npm run build
       args:
+        chdir: "{{ frontend_dir }}"
         creates: "{{ frontend_dir }}/dist"
 
     - name: Configurar Nginx para servir la app
