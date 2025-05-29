@@ -15,12 +15,14 @@
         name:
           - python3-venv
           - python3-pip
+          - python3-dev
+          - build-essential
           - git
           - nginx
           - nodejs
           - npm
         update_cache: yes
-        state: latest
+        state: present
 
     - name: Clonar repositorio DevPilot
       git:
@@ -28,16 +30,59 @@
         dest: "{{ app_root }}"
         version: main
         force: yes
+      become_user: ubuntu
 
-    - name: Crear virtualenv e instalar dependencias Python
-      shell: |
-        python3 -m venv venv
-        . venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
+    - name: Crear directorio venv si no existe
+      file:
+        path: "{{ venv_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Crear virtualenv
+      command: python3 -m venv {{ venv_dir }}
       args:
-        chdir: "{{ backend_dir }}"
         creates: "{{ venv_dir }}/bin/activate"
+      become_user: ubuntu
+
+    - name: Actualizar pip en el virtualenv
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Verificar que requirements.txt existe
+      stat:
+        path: "{{ backend_dir }}/requirements.txt"
+      register: requirements_file
+      
+    - name: Mostrar error si requirements.txt no existe
+      fail:
+        msg: "El archivo requirements.txt no existe en {{ backend_dir }}"
+      when: not requirements_file.stat.exists
+
+    - name: Instalar dependencias Python desde requirements.txt
+      pip:
+        requirements: "{{ backend_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Instalar Flask-Migrate explícitamente (por si no está en requirements.txt)
+      pip:
+        name: 
+          - Flask-Migrate
+          - gunicorn
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Cambiar propietario del directorio de la aplicación
+      file:
+        path: "{{ app_root }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
 
     - name: Copiar archivo .env al servidor
       copy:
@@ -50,19 +95,42 @@
           DB_USER={{ lookup('env','DB_USER') }}
           DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
           DB_NAME=devpilot-db
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
 
-    - name: Exportar FLASK_APP y FLASK_ENV para sesiones futuras
+    - name: Verificar que Flask está instalado
       shell: |
-        echo "export FLASK_APP=run.py" >> ~/.bashrc
-        echo "export FLASK_ENV=production" >> ~/.bashrc
+        source {{ venv_dir }}/bin/activate
+        python -c "import flask; print('Flask version:', flask.__version__)"
+      args:
+        chdir: "{{ backend_dir }}"
+        executable: /bin/bash
+      become_user: ubuntu
+      register: flask_check
+
+    - name: Mostrar versión de Flask
+      debug:
+        var: flask_check.stdout_lines
+
+    - name: Verificar que Flask-Migrate está instalado
+      shell: |
+        source {{ venv_dir }}/bin/activate
+        python -c "import flask_migrate; print('Flask-Migrate disponible')"
+      args:
+        chdir: "{{ backend_dir }}"
+        executable: /bin/bash
+      become_user: ubuntu
 
     - name: Ejecutar flask db init
       shell: |
-        . {{ venv_dir }}/bin/activate && \
-        export FLASK_APP=run.py && \
-        flask db init || echo "Ya existe migrations/"
+        source {{ venv_dir }}/bin/activate
+        export FLASK_APP=run.py
+        flask db init || echo "Migrations directory already exists"
       args:
         chdir: "{{ backend_dir }}"
+        executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
@@ -74,11 +142,13 @@
 
     - name: Ejecutar flask db migrate
       shell: |
-        . {{ venv_dir }}/bin/activate && \
-        export FLASK_APP=run.py && \
+        source {{ venv_dir }}/bin/activate
+        export FLASK_APP=run.py
         flask db migrate -m "Initial migration"
       args:
         chdir: "{{ backend_dir }}"
+        executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
@@ -90,11 +160,13 @@
 
     - name: Ejecutar flask db upgrade
       shell: |
-        . {{ venv_dir }}/bin/activate && \
-        export FLASK_APP=run.py && \
+        source {{ venv_dir }}/bin/activate
+        export FLASK_APP=run.py
         flask db upgrade
       args:
         chdir: "{{ backend_dir }}"
+        executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
@@ -104,13 +176,17 @@
         DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') }}"
         DB_NAME: devpilot-db
 
+    - name: Instalar dependencias de Node.js
+      npm:
+        path: "{{ frontend_dir }}"
+        state: present
+      become_user: ubuntu
+
     - name: Construir frontend con npm
-      shell: |
-        npm ci
-        npm run build
+      shell: npm run build
       args:
         chdir: "{{ frontend_dir }}"
-        creates: "{{ frontend_dir }}/dist"
+      become_user: ubuntu
 
     - name: Configurar Nginx para servir la app
       copy:
@@ -123,15 +199,23 @@
               root {{ frontend_dir }}/dist;
               index index.html;
 
+              # API requests
               location /api/ {
                   proxy_pass http://127.0.0.1:5000;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
               }
 
+              # Frontend SPA routing
               location / {
                   try_files $uri $uri/ /index.html;
               }
+
+              # Compression
+              gzip on;
+              gzip_types text/css application/javascript application/json text/plain;
           }
       notify:
         - Enable Nginx site
@@ -148,20 +232,29 @@
         dest: /etc/systemd/system/gunicorn.service
         content: |
           [Unit]
-          Description=Gunicorn for DevPilot
+          Description=Gunicorn for DevPilot Flask App
           After=network.target
 
           [Service]
           User=ubuntu
+          Group=ubuntu
           WorkingDirectory={{ backend_dir }}
           EnvironmentFile={{ backend_dir }}/.env
           ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+          ExecReload=/bin/kill -s HUP $MAINPID
           Restart=always
+          RestartSec=3
 
           [Install]
           WantedBy=multi-user.target
       notify:
         - Reload systemd
+
+    - name: Habilitar y iniciar Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
 
   handlers:
     - name: Enable Nginx site
@@ -169,6 +262,7 @@
         src: /etc/nginx/sites-available/devpilot
         dest: /etc/nginx/sites-enabled/devpilot
         state: link
+      notify: Reload Nginx
 
     - name: Reload Nginx
       service:
