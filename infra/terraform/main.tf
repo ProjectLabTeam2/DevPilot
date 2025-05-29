@@ -9,7 +9,6 @@ module "networking" {
 module "ec2" {
   source            = "./modules/ec2"
   key_name          = var.key_name
-  # Para EC2 usaremos la primera subnet pública
   public_subnet_id  = module.networking.public_subnet_ids[0]
   security_group_id = module.networking.sg_web_id
 }
