@@ -51,6 +51,28 @@
           DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
           DB_NAME=devpilot-db
 
+    - name: Exportar variables de entorno para Flask
+      shell: |
+        echo "export FLASK_APP=run.py" >> ~/.bashrc
+        echo "export FLASK_ENV=production" >> ~/.bashrc
+
+    - name: Ejecutar flask db init, migrate y upgrade
+      shell: |
+        cd {{ backend_dir }}
+        . venv/bin/activate
+        export FLASK_APP=run.py
+        flask db init || echo "Ya existe migrations/"
+        flask db migrate -m "Initial migration"
+        flask db upgrade
+      environment:
+        FLASK_ENV: production
+        SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') }}"
+        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') }}"
+        DB_USER: "{{ lookup('env','DB_USER') }}"
+        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') }}"
+        DB_NAME: devpilot-db
+
     - name: Construir frontend con npm
       shell: |
         cd {{ frontend_dir }}
@@ -66,6 +88,7 @@
           server {
               listen 80;
               server_name _;
+
               root {{ frontend_dir }}/dist;
               index index.html;
 
@@ -89,7 +112,7 @@
       notify:
         - Reload Nginx
 
-    - name: Create systemd service for Gunicorn
+    - name: Crear servicio systemd para Gunicorn
       copy:
         dest: /etc/systemd/system/gunicorn.service
         content: |
@@ -102,6 +125,7 @@
           WorkingDirectory={{ backend_dir }}
           EnvironmentFile={{ backend_dir }}/.env
           ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+          Restart=always
 
           [Install]
           WantedBy=multi-user.target
