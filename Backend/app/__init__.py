@@ -34,14 +34,14 @@ def create_app():
         return jsonify({"msg": "No autorizado"}), 401
 
 
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 
     from app.routes.users import users_bp
     from app.routes.projects import projects_bp
     from app.routes.tasks import tasks_bp
 
-    app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(users_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(tasks_bp)
 

@@ -4,5 +4,6 @@ terraform {
     key            = "devpilot/infra/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "devpilot-terraform-locks-johnki-20250527"
+    profile        = "terraform"
   }
 }

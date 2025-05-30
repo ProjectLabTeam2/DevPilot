@@ -1,4 +1,3 @@
----
 - name: Configurar EC2 para DevPilot (Flask + React)
   hosts: web
   become: true
@@ -6,7 +5,7 @@
   vars:
     app_root: /home/ubuntu/DevPilot
     backend_dir: "{{ app_root }}/Backend"
-    frontend_dir: "{{ app_root }}/Frontend"
+    frontend_dir: "{{ app_root }}/frontend"
     venv_dir: "{{ backend_dir }}/venv"
 
   tasks:
@@ -22,22 +21,53 @@
         update_cache: yes
         state: latest
 
+    - name: Eliminar directorio existente si hay problemas de permisos
+      file:
+        path: "{{ app_root }}"
+        state: absent
+      ignore_errors: yes
+
     - name: Clonar repositorio DevPilot
       git:
         repo: 'https://github.com/ProjectLabTeam2/DevPilot.git'
         dest: "{{ app_root }}"
         version: main
         force: yes
+      become_user: ubuntu
 
-    - name: Crear virtualenv e instalar dependencias Python
+    - name: Eliminar venv si está corrupto
+      file:
+        path: "{{ venv_dir }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Crear virtualenv
       shell: |
         cd {{ backend_dir }}
         python3 -m venv venv
-        . venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
+      become_user: ubuntu
       args:
         creates: "{{ venv_dir }}/bin/activate"
+
+    - name: Actualizar pip en el virtualenv
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Instalar dependencias desde requirements.txt
+      pip:
+        requirements: "{{ backend_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Instalar gunicorn en el virtualenv
+      pip:
+        name: gunicorn
+        state: present
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
 
     - name: Copiar archivo .env al servidor
       copy:
@@ -50,14 +80,36 @@
           DB_USER={{ lookup('env','DB_USER') }}
           DB_PASSWORD={{ lookup('env','DB_PASSWORD') }}
           DB_NAME=devpilotdb
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+
+    - name: Ejecutar flask db upgrade
+      shell: |
+        cd {{ backend_dir }}
+        {{ venv_dir }}/bin/flask db upgrade
+      args:
+        executable: /bin/bash
+      become_user: ubuntu
+      environment:
+        FLASK_ENV: production
+        FLASK_APP: run.py
+        SECRET_KEY: "{{ lookup('env','SECRET_KEY') | default('dev-secret-key-change-in-production') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') | default('dev-jwt-secret-change-in-production') }}"
+        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') | default('localhost') }}"
+        DB_USER: "{{ lookup('env','DB_USER') | default('postgres') }}"
+        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
+        DB_NAME: devpilotdb
+
 
     - name: Construir frontend con npm
       shell: |
-        cd {{ frontend_dir }}
         npm ci
         npm run build
       args:
+        chdir: "{{ frontend_dir }}"
         creates: "{{ frontend_dir }}/dist"
+      become_user: ubuntu
 
     - name: Configurar Nginx para servir la app
       copy:
@@ -66,11 +118,12 @@
           server {
               listen 80;
               server_name _;
+
               root {{ frontend_dir }}/dist;
               index index.html;
 
               location /api/ {
-                  proxy_pass http://127.0.0.1:5000;
+                  proxy_pass http://127.0.0.1:8000;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
               }
@@ -89,7 +142,14 @@
       notify:
         - Reload Nginx
 
-    - name: Create systemd service for Gunicorn
+    - name: Asegurar permisos adecuados para el archivo .env
+      file:
+        path: "{{ backend_dir }}/.env"
+        mode: '0644'
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Crear servicio systemd para Gunicorn
       copy:
         dest: /etc/systemd/system/gunicorn.service
         content: |
@@ -101,7 +161,10 @@
           User=ubuntu
           WorkingDirectory={{ backend_dir }}
           EnvironmentFile={{ backend_dir }}/.env
-          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+          ExecStartPre=/usr/bin/fuser -k 8000/tcp || true
+          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 run:app
+          Restart=always
+          ExecStopPost=/usr/bin/fuser -k 8000/tcp || true
 
           [Install]
           WantedBy=multi-user.target
