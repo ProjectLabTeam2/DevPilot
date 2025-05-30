@@ -4,7 +4,7 @@ from app.models import User
 from app.schemas import UserSchema
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-users_bp = Blueprint('users', __name__, url_prefix='/api/tasks')
+users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 user_schema = UserSchema()
 
 @users_bp.route('/register', methods=['POST'])
