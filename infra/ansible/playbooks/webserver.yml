@@ -168,19 +168,15 @@
 
           [Install]
           WantedBy=multi-user.target
-        notify:
+      notify:
         - Reload systemd
 
-        handlers:
-        - name: Reload systemd
-          systemd:
-            daemon_reload: yes
-
-        - name: Enable Nginx site
-          file:
-            src: /etc/nginx/sites-available/devpilot
-            dest: /etc/nginx/sites-enabled/devpilot
-            state: link
+  handlers:
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/devpilot
+        dest: /etc/nginx/sites-enabled/devpilot
+        state: link
 
     - name: Reload Nginx
       service:
