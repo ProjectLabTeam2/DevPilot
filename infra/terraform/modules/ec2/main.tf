@@ -1,5 +1,5 @@
 resource "aws_instance" "app" {
-  ami                         = "ami-084568db4383264d4"  # Ubuntu 20.04 LTS
+  ami                         = "ami-084568db4383264d4" 
   instance_type               = "t2.micro"
   key_name                    = var.key_name
   subnet_id                   = var.public_subnet_id
