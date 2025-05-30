@@ -35,6 +35,12 @@
         force: yes
       become_user: ubuntu
 
+    - name: Eliminar venv si está corrupto
+      file:
+        path: "{{ venv_dir }}"
+        state: absent
+      ignore_errors: yes
+
     - name: Crear virtualenv
       shell: |
         cd {{ backend_dir }}
