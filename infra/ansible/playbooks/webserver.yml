@@ -35,6 +35,12 @@
         force: yes
       become_user: ubuntu
 
+    - name: Eliminar venv si está corrupto
+      file:
+        path: "{{ venv_dir }}"
+        state: absent
+      ignore_errors: yes
+
     - name: Crear virtualenv
       shell: |
         cd {{ backend_dir }}
@@ -148,7 +154,7 @@
           User=ubuntu
           WorkingDirectory={{ backend_dir }}
           EnvironmentFile={{ backend_dir }}/.env
-          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 run:app
           Restart=always
 
           [Install]

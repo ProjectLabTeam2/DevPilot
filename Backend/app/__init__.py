@@ -41,7 +41,7 @@ def create_app():
     from app.routes.projects import projects_bp
     from app.routes.tasks import tasks_bp
 
-    app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(users_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(tasks_bp)
 
