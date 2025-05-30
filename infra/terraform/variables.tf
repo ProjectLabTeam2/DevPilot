@@ -31,5 +31,5 @@ variable "key_name" {
 variable "my_office_ip" {
   description = "Tu IP pública/CIDR para SSH"
   type        = string
-  default     = "181.142.123.92/32"
+  default     = "181.128.89.61/32"
 }
