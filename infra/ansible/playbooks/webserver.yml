@@ -1,4 +1,3 @@
----
 - name: Configurar EC2 para DevPilot (Flask + React)
   hosts: web
   become: true
@@ -6,7 +5,7 @@
   vars:
     app_root: /home/ubuntu/DevPilot
     backend_dir: "{{ app_root }}/Backend"
-    frontend_dir: "{{ app_root }}/frontend"  # Corregido: era "Frontend" 
+    frontend_dir: "{{ app_root }}/frontend"
     venv_dir: "{{ backend_dir }}/venv"
 
   tasks:
@@ -36,54 +35,39 @@
         force: yes
       become_user: ubuntu
 
-    - name: Verificar estructura del proyecto
-      shell: |
-        echo "=== Contenido de {{ app_root }} ==="
-        ls -la {{ app_root }}
-        echo "=== Contenido de {{ backend_dir }} ==="
-        ls -la {{ backend_dir }}
-        echo "=== Verificando requirements.txt ==="
-        cat {{ backend_dir }}/requirements.txt | head -10
-      become_user: ubuntu
-      register: project_structure
-
-    - name: Mostrar estructura del proyecto
-      debug:
-        var: project_structure.stdout_lines
+    - name: Eliminar venv si está corrupto
+      file:
+        path: "{{ venv_dir }}"
+        state: absent
+      ignore_errors: yes
 
     - name: Crear virtualenv
       shell: |
         cd {{ backend_dir }}
         python3 -m venv venv
-        echo "Virtual env creado exitosamente"
       become_user: ubuntu
       args:
         creates: "{{ venv_dir }}/bin/activate"
 
-    - name: Instalar dependencias Python paso a paso
-      shell: |
-        cd {{ backend_dir }}
-        . venv/bin/activate
-        echo "=== Verificando Python en venv ==="
-        which python
-        python --version
-        echo "=== Actualizando pip ==="
-        pip install --upgrade pip
-        echo "=== Instalando dependencias ==="
-        pip install -r requirements.txt
-        echo "=== Instalando Gunicorn ==="
-        pip install gunicorn
-        echo "=== Verificando Flask instalado ==="
-        pip list | grep -i flask
-        echo "=== Verificando comando flask ==="
-        which flask || echo "Flask command not found"
-        flask --version || echo "Flask version command failed"
+    - name: Actualizar pip en el virtualenv
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_dir }}"
       become_user: ubuntu
-      register: pip_install_result
 
-    - name: Mostrar resultado de instalación de dependencias
-      debug:
-        var: pip_install_result.stdout_lines
+    - name: Instalar dependencias desde requirements.txt
+      pip:
+        requirements: "{{ backend_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
+
+    - name: Instalar gunicorn en el virtualenv
+      pip:
+        name: gunicorn
+        state: present
+        virtualenv: "{{ venv_dir }}"
+      become_user: ubuntu
 
     - name: Copiar archivo .env al servidor
       copy:
@@ -100,13 +84,13 @@
         group: ubuntu
         mode: '0600'
 
-    - name: Ejecutar flask db init
+    - name: Generar migraciones si no existen
       shell: |
         cd {{ backend_dir }}
-        {{ venv_dir }}/bin/python -m flask db init || echo "Ya existe migrations/"
-      become_user: ubuntu
+        {{ venv_dir }}/bin/flask db init || true
       args:
         executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         FLASK_APP: run.py
@@ -117,22 +101,13 @@
         DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
         DB_NAME: devpilotdb
 
-    - name: Crear directorio migrations/versions si no existe
-      file:
-        path: "{{ backend_dir }}/migrations/versions"
-        state: directory
-        owner: ubuntu
-        group: ubuntu
-        mode: '0755'
-      become_user: ubuntu
-
-    - name: Ejecutar flask db migrate
+    - name: Generar migración inicial
       shell: |
         cd {{ backend_dir }}
-        {{ venv_dir }}/bin/python -m flask db migrate -m "Initial migration"
-      become_user: ubuntu
+        {{ venv_dir }}/bin/flask db migrate -m "initial migration"
       args:
         executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         FLASK_APP: run.py
@@ -146,19 +121,20 @@
     - name: Ejecutar flask db upgrade
       shell: |
         cd {{ backend_dir }}
-        {{ venv_dir }}/bin/python -m flask db upgrade
-      become_user: ubuntu
+        {{ venv_dir }}/bin/flask db upgrade
       args:
         executable: /bin/bash
+      become_user: ubuntu
       environment:
         FLASK_ENV: production
         FLASK_APP: run.py
         SECRET_KEY: "{{ lookup('env','SECRET_KEY') | default('dev-secret-key-change-in-production') }}"
-        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') | default('dev-jwt-secret-key-change-in-production') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') | default('dev-jwt-secret-change-in-production') }}"
         DB_HOST: "{{ lookup('env','RDS_ENDPOINT') | default('localhost') }}"
         DB_USER: "{{ lookup('env','DB_USER') | default('postgres') }}"
         DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
         DB_NAME: devpilotdb
+
 
     - name: Construir frontend con npm
       shell: |
