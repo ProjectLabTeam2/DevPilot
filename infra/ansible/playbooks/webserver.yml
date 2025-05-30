@@ -123,7 +123,7 @@
               index index.html;
 
               location /api/ {
-                  proxy_pass http://127.0.0.1:8000;
+                  proxy_pass http://54.237.150.146:8000;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
               }
@@ -141,6 +141,13 @@
         state: absent
       notify:
         - Reload Nginx
+
+    - name: Asegurar permisos adecuados para el archivo .env
+      file:
+        path: "{{ backend_dir }}/.env"
+        mode: '0644'
+        owner: ubuntu
+        group: ubuntu
 
     - name: Crear servicio systemd para Gunicorn
       copy:
