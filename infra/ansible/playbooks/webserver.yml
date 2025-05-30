@@ -123,7 +123,7 @@
               index index.html;
 
               location /api/ {
-                  proxy_pass http://127.0.0.1:8000;
+                  proxy_pass http://127.0.0.1:80;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
               }
@@ -149,6 +149,21 @@
         owner: ubuntu
         group: ubuntu
 
+    - name: Crear script para liberar puerto 8000
+      copy:
+        dest: /usr/local/bin/kill_port_8000.sh
+        mode: '0755'
+        owner: root
+        group: root
+        content: |
+          #!/bin/bash
+          PORT=80
+          PID=$(lsof -ti tcp:$PORT)
+          if [ -n "$PID" ]; then
+            kill -9 $PID
+          fi
+          exit 0
+
     - name: Crear servicio systemd para Gunicorn
       copy:
         dest: /etc/systemd/system/gunicorn.service
@@ -161,26 +176,26 @@
           User=ubuntu
           WorkingDirectory={{ backend_dir }}
           EnvironmentFile={{ backend_dir }}/.env
-          ExecStartPre=/usr/bin/fuser -k 8000/tcp || true
-          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 run:app
+          ExecStartPre=/usr/local/bin/kill_port_8000.sh
+          ExecStart={{ venv_dir }}/bin/gunicorn --workers 3 --bind 0.0.0.0:80 run:app
           Restart=always
-          ExecStopPost=/usr/bin/fuser -k 8000/tcp || true
+          ExecStopPost=/usr/local/bin/kill_port_8000.sh
 
           [Install]
           WantedBy=multi-user.target
-        notify:
+      notify:
         - Reload systemd
 
-        handlers:
-        - name: Reload systemd
-          systemd:
-            daemon_reload: yes
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
 
-        - name: Enable Nginx site
-          file:
-            src: /etc/nginx/sites-available/devpilot
-            dest: /etc/nginx/sites-enabled/devpilot
-            state: link
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/devpilot
+        dest: /etc/nginx/sites-enabled/devpilot
+        state: link
 
     - name: Reload Nginx
       service:
