@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import TaskList from '../tasks/TaskList';
+import './ProjectDetail.css';
 
 export default function ProjectDetail() {
   const { id } = useParams();

@@ -1,58 +1,89 @@
+/* Base de diseño moderno y coherente para todo el proyecto */
+:root {
+  --primary-color: #3b82f6;
+  --primary-dark: #2563eb;
+  --text-color: #1e293b;
+  --bg-color: #f5f7fa;
+  --border-color: #d1d5db;
+  --radius: 12px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --font: 'Inter', system-ui, sans-serif;
+}
 
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Contenedor principal */
 .auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: calc(100vh - 100px);
   padding: 2rem;
+  background: var(--bg-color);
 }
 
+/* Formulario */
 .auth-form {
   background: white;
   padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  transition: transform 0.3s ease;
 }
 
+/* Título */
 .auth-form h2 {
   text-align: center;
   margin-bottom: 1.5rem;
-  color: #333;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-color);
 }
 
+/* Inputs */
 .auth-form input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
   margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .auth-form input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
+/* Botón */
 .auth-form button {
   width: 100%;
-  padding: 0.75rem;
-  background: #007bff;
+  padding: 0.85rem;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.25s;
 }
 
 .auth-form button:hover:not(:disabled) {
-  background: #0056b3;
+  background: var(--primary-dark);
 }
 
 .auth-form button:disabled {
@@ -60,18 +91,40 @@
   cursor: not-allowed;
 }
 
+/* Párrafo con enlace */
 .auth-form p {
   text-align: center;
-  margin-top: 1rem;
-  color: #666;
+  margin-top: 1.2rem;
+  font-size: 0.95rem;
+  color: #64748b;
 }
 
 .auth-form p a {
-  color: #007bff;
-  cursor: pointer;
+  color: var(--primary-color);
   text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
 .auth-form p a:hover {
   text-decoration: underline;
+  color: var(--primary-dark);
+}
+
+/* Responsive adicional para pantallas pequeñas */
+@media (max-width: 480px) {
+  .auth-form {
+    padding: 1.5rem;
+    border-radius: 10px;
+  }
+
+  .auth-form h2 {
+    font-size: 1.5rem;
+  }
+
+  .auth-form input,
+  .auth-form button {
+    font-size: 0.95rem;
+    padding: 0.75rem;
+  }
 }
