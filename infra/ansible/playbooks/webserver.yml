@@ -1,4 +1,5 @@
-- name: Configurar EC2 para DevPilot (Flask + React)
+---
+- name: Configurar EC2 para DevPilot (Flask + React) con HTTPS
   hosts: web
   become: true
 
@@ -7,6 +8,8 @@
     backend_dir: "{{ app_root }}/Backend"
     frontend_dir: "{{ app_root }}/frontend"
     venv_dir: "{{ backend_dir }}/venv"
+    domain: "devpilot.online"
+    email: "juanjogxmer0212@gmail.com" 
 
   tasks:
     - name: Instalar paquetes del sistema
@@ -18,6 +21,8 @@
           - nginx
           - nodejs
           - npm
+          - certbot
+          - python3-certbot-nginx
         update_cache: yes
         state: latest
 
@@ -35,7 +40,7 @@
         force: yes
       become_user: ubuntu
 
-    - name: Eliminar venv si está corrupto
+    - name: Eliminar virtualenv si está corrupto
       file:
         path: "{{ venv_dir }}"
         state: absent
@@ -43,11 +48,11 @@
 
     - name: Crear virtualenv
       shell: |
-        cd {{ backend_dir }}
+        cd "{{ backend_dir }}"
         python3 -m venv venv
-      become_user: ubuntu
       args:
         creates: "{{ venv_dir }}/bin/activate"
+      become_user: ubuntu
 
     - name: Actualizar pip en el virtualenv
       pip:
@@ -86,8 +91,8 @@
 
     - name: Ejecutar flask db upgrade
       shell: |
-        cd {{ backend_dir }}
-        {{ venv_dir }}/bin/flask db upgrade
+        cd "{{ backend_dir }}"
+        "{{ venv_dir }}/bin/flask" db upgrade
       args:
         executable: /bin/bash
       become_user: ubuntu
@@ -101,7 +106,6 @@
         DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
         DB_NAME: devpilotdb
 
-
     - name: Construir frontend con npm
       shell: |
         npm ci
@@ -111,13 +115,13 @@
         creates: "{{ frontend_dir }}/dist"
       become_user: ubuntu
 
-    - name: Configurar Nginx para servir la app
+    - name: Configurar Nginx para servir la app (HTTP, antes de obtener SSL)
       copy:
         dest: /etc/nginx/sites-available/devpilot
         content: |
           server {
-              listen 8000;
-              server_name _;
+              listen 80;
+              server_name {{ domain }} www.{{ domain }};
 
               root {{ frontend_dir }}/dist;
               index index.html;
@@ -154,21 +158,6 @@
         owner: ubuntu
         group: ubuntu
 
-    - name: Crear script para liberar puerto 8000
-      copy:
-        dest: /usr/local/bin/kill_port_8000.sh
-        mode: '0755'
-        owner: root
-        group: root
-        content: |
-          #!/bin/bash
-          PORT=8000
-          PID=$(lsof -ti tcp:$PORT)
-          if [ -n "$PID" ]; then
-            kill -9 $PID
-          fi
-          exit 0
-
     - name: Crear servicio systemd para Gunicorn
       copy:
         dest: /etc/systemd/system/gunicorn.service
@@ -189,6 +178,82 @@
       notify:
         - Reload systemd
 
+    - name: Iniciar Gunicorn
+      systemd:
+        name: gunicorn
+        state: started
+        enabled: yes
+
+    - name: Recargar Nginx tras configurar HTTP
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Esperar 5 segundos a que Nginx arranque
+      wait_for:
+        port: 80
+        delay: 5
+
+    - name: Obtener certificado SSL con Certbot
+      command: >
+        certbot certonly --nginx --non-interactive --agree-tos
+        --email {{ email }}
+        -d {{ domain }} -d www.{{ domain }}
+      register: certbot_result
+      failed_when: certbot_result.rc != 0 and "Certificate not yet due for renewal" not in certbot_result.stderr
+
+    - name: Configurar Nginx para servir la app con HTTPS
+      copy:
+        dest: /etc/nginx/sites-available/devpilot
+        content: |
+          server {
+              listen 80;
+              server_name {{ domain }} www.{{ domain }};
+              return 301 https://$host$request_uri;
+          }
+
+          server {
+              listen 443 ssl;
+              server_name {{ domain }} www.{{ domain }};
+
+              ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_prefer_server_ciphers on;
+              ssl_ciphers HIGH:!aNULL:!MD5;
+
+              root {{ frontend_dir }}/dist;
+              index index.html;
+
+              location /api/ {
+                  proxy_pass http://127.0.0.1:5512/api/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+
+              location / {
+                  try_files $uri /index.html;
+              }
+
+              error_page 404 /index.html;
+          }
+      notify:
+        - Reload Nginx
+
+    - name: Recargar Nginx tras configurar HTTPS
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Configurar renovación automática de certificados
+      cron:
+        name: "Renovación automática Let's Encrypt"
+        job: "certbot renew --quiet --nginx"
+        minute: "0"
+        hour: "3"
 
   handlers:
     - name: Enable Nginx site
