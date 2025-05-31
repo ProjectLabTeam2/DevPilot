@@ -76,7 +76,7 @@ echo ""
 echo "¿Deseas abrir Visual Studio Code?"
 echo "1. Sí"
 echo "2. No"
-read -p "Seleccione una opción (1 o 2): " OPCION_CODE
+read -p "Seleccione una opción: " OPCION_CODE
 
 if [ "$OPCION_CODE" == "1" ]; then
     cd ..
