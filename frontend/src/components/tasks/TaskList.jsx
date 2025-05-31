@@ -31,13 +31,25 @@ export default function TaskList({ projectId }) {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Esta acción eliminará la tarea de forma permanente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.delete(`/tasks/${taskId}`);
+        await Swal.fire('¡Eliminada!', 'La tarea ha sido eliminada.', 'success');
         fetchTasks();
       } catch (error) {
         console.error('Error al eliminar tarea:', error);
-        Swal.fire('Error al eliminar tarea');
+        Swal.fire('Error', 'No se pudo eliminar la tarea.', 'error');
       }
     }
   };
@@ -48,7 +60,7 @@ export default function TaskList({ projectId }) {
       fetchTasks();
     } catch (error) {
       console.error('Error al actualizar estado:', error);
-      Swal.fire('Error al actualizar estado');
+      Swal.fire('Error', 'Error al actualizar estado', 'error');
     }
   };
 

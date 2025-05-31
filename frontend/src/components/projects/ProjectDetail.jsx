@@ -21,20 +21,32 @@ export default function ProjectDetail() {
       setProject(res.data);
     } catch (error) {
       console.error('Error al cargar proyecto:', error);
-      Swal.fire('Error al cargar proyecto');
+      Swal.fire('Error', 'No se pudo cargar el proyecto.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este proyecto? Se eliminarán todas las tareas asociadas.')) {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Se eliminarán todas las tareas asociadas a este proyecto.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api.delete(`/projects/${id}`);
+        await Swal.fire('¡Eliminado!', 'El proyecto ha sido eliminado.', 'success');
         navigate('/projects');
       } catch (error) {
         console.error('Error al eliminar proyecto:', error);
-        Swal.fire('Error al eliminar proyecto');
+        Swal.fire('Error', 'No se pudo eliminar el proyecto.', 'error');
       }
     }
   };

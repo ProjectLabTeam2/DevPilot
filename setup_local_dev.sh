@@ -65,7 +65,7 @@ API_JS_PATH="frontend/src/api/api.js"
 echo "Modificando archivo api.js..."
 sed -i "s|baseURL: .*|baseURL: 'http://127.0.0.1:5000/api',|" "$API_JS_PATH"
 
-# Execute React in background
+# Execute React
 cd frontend || exit 1
 
 echo "Instalando dependencias con npm ci..."

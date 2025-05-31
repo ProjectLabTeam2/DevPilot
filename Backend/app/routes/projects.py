@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models import Project
+from app.models import Project, Task
 from app.schemas import ProjectSchema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -55,6 +55,9 @@ def update_project(id):
 @jwt_required()
 def delete_project(id):
     project = Project.query.get_or_404(id)
+
+    Task.query.filter_by(project_id=project.id).delete()
+
     db.session.delete(project)
     db.session.commit()
     return '', 204

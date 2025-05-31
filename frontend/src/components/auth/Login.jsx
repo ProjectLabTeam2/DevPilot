@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContexts';
 import './Auth.css';
@@ -10,6 +10,13 @@ export default function Login() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async e => {
@@ -20,7 +27,7 @@ export default function Login() {
       navigate('/');
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
-      Swal.fire('Error al iniciar sesión. Verifica tus credenciales.');
+      Swal.fire('Error', 'No se pudo iniciar sesión. Verifica tus credenciales.', 'error');
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,8 @@ import './Taskform.css';
 import Swal from 'sweetalert2';
 
 export default function TaskForm({ projectId, onSuccess, onCancel }) {
+  const today = new Date().toISOString().split("T")[0];
+
   const [form, setForm] = useState({ 
     description: '', 
     status: 'pending', 
@@ -34,7 +36,7 @@ export default function TaskForm({ projectId, onSuccess, onCancel }) {
       onSuccess();
     } catch (error) {
       console.error('Error al crear tarea:', error);
-      Swal.fire('Error al crear tarea');
+      Swal.fire('Error','No se pudo crear la tarea.', 'error');
     } finally {
       setLoading(false);
     }
@@ -83,9 +85,11 @@ export default function TaskForm({ projectId, onSuccess, onCancel }) {
           value={form.due_date}
           onChange={handleChange}
           disabled={loading}
+          min={today}
+          max="2100-12-31"
           placeholder="Fecha de vencimiento (opcional)"
         />
-        
+                
         <div className="task-form__actions">
           <button type="submit" disabled={loading}>
             {loading ? 'Creando...' : 'Crear Tarea'}

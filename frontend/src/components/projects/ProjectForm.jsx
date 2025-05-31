@@ -16,7 +16,7 @@ export default function ProjectForm() {
         .then(res => setForm(res.data))
         .catch(err => {
           console.error('Error al cargar proyecto:', err);
-          Swal.fire('Error al cargar proyecto');
+          Swal.fire('Error','No se pudo cargar el proyecto.', 'error');
         })
         .finally(() => setLoading(false));
     }
@@ -33,7 +33,7 @@ export default function ProjectForm() {
       navigate('/projects');
     } catch (error) {
       console.error('Error al guardar proyecto:', error);
-      Swal.fire('Error al guardar proyecto');
+      Swal.fire('Error', 'No se pudo guardar el proyecto.', 'error');
     } finally {
       setLoading(false);
     }

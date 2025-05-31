@@ -18,7 +18,7 @@ export default function ProjectList() {
       setProjects(res.data);
     } catch (error) {
       console.error('Error al cargar proyectos:', error);
-      Swal.fire('Error al cargar proyectos');
+      Swal.fire('Error', 'No se pudo cargar los proyectos.', 'error');
     } finally {
       setLoading(false);
     }
