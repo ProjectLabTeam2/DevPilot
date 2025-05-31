@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api/api';
 import './Taskform.css';
+import Swal from 'sweetalert2';
 
 export default function TaskForm({ projectId, onSuccess, onCancel }) {
   const [form, setForm] = useState({ 
@@ -33,7 +34,7 @@ export default function TaskForm({ projectId, onSuccess, onCancel }) {
       onSuccess();
     } catch (error) {
       console.error('Error al crear tarea:', error);
-      alert('Error al crear tarea');
+      Swal.fire('Error al crear tarea');
     } finally {
       setLoading(false);
     }

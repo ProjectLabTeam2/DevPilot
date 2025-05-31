@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/api';
 import TaskForm from './TaskForm';
 import './TaskList.css';
+import Swal from 'sweetalert2';
 
 export default function TaskList({ projectId }) {
   const [tasks, setTasks] = useState([]);
@@ -36,7 +37,7 @@ export default function TaskList({ projectId }) {
         fetchTasks();
       } catch (error) {
         console.error('Error al eliminar tarea:', error);
-        alert('Error al eliminar tarea');
+        Swal.fire('Error al eliminar tarea');
       }
     }
   };
@@ -47,7 +48,7 @@ export default function TaskList({ projectId }) {
       fetchTasks();
     } catch (error) {
       console.error('Error al actualizar estado:', error);
-      alert('Error al actualizar estado');
+      Swal.fire('Error al actualizar estado');
     }
   };
 

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import TaskList from '../tasks/TaskList';
 import './ProjectDetail.css';
+import Swal from 'sweetalert2';
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -20,7 +21,7 @@ export default function ProjectDetail() {
       setProject(res.data);
     } catch (error) {
       console.error('Error al cargar proyecto:', error);
-      alert('Error al cargar proyecto');
+      Swal.fire('Error al cargar proyecto');
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,7 @@ export default function ProjectDetail() {
         navigate('/projects');
       } catch (error) {
         console.error('Error al eliminar proyecto:', error);
-        alert('Error al eliminar proyecto');
+        Swal.fire('Error al eliminar proyecto');
       }
     }
   };

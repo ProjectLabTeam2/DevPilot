@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/api';
 import { Link } from 'react-router-dom';
 import './ProjectList.css';
+import Swal from 'sweetalert2';
 
 export default function ProjectList() {
   const [projects, setProjects] = useState([]);
@@ -17,7 +18,7 @@ export default function ProjectList() {
       setProjects(res.data);
     } catch (error) {
       console.error('Error al cargar proyectos:', error);
-      alert('Error al cargar proyectos');
+      Swal.fire('Error al cargar proyectos');
     } finally {
       setLoading(false);
     }

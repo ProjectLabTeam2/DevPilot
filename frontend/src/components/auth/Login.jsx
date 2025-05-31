@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContexts';
 import './Auth.css';
+import Swal from 'sweetalert2';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -19,7 +20,7 @@ export default function Login() {
       navigate('/');
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
-      alert('Error al iniciar sesión. Verifica tus credenciales.');
+      Swal.fire('Error al iniciar sesión. Verifica tus credenciales.');
     } finally {
       setLoading(false);
     }

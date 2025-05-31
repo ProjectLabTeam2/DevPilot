@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/api';
+import Swal from 'sweetalert2';
 
 export default function ProjectForm() {
   const { id } = useParams();
@@ -15,7 +16,7 @@ export default function ProjectForm() {
         .then(res => setForm(res.data))
         .catch(err => {
           console.error('Error al cargar proyecto:', err);
-          alert('Error al cargar proyecto');
+          Swal.fire('Error al cargar proyecto');
         })
         .finally(() => setLoading(false));
     }
@@ -32,7 +33,7 @@ export default function ProjectForm() {
       navigate('/projects');
     } catch (error) {
       console.error('Error al guardar proyecto:', error);
-      alert('Error al guardar proyecto');
+      Swal.fire('Error al guardar proyecto');
     } finally {
       setLoading(false);
     }

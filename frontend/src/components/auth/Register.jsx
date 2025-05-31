@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/api';
 import './Auth.css';
+import Swal from 'sweetalert2';
 
 export default function Register() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -15,14 +16,14 @@ export default function Register() {
     setLoading(true);
     try {
       await api.post('/users/register', form);
-      alert('Registro exitoso. Ahora puedes iniciar sesión.');
+      Swal.fire('Registro exitoso. Ahora puedes iniciar sesión.');
       navigate('/login');
     } catch (error) {
       console.error('Error al registrar:', error);
       if (error.response?.data?.message) {
-        alert(`Error: ${error.response.data.message}`);
+        Swal.fire(`Error: ${error.response.data.message}`);
       } else {
-        alert('Error al registrar. Intenta con otros datos.');
+        Swal.fire('Error al registrar. Intenta con otros datos.');
       }
     } finally {
       setLoading(false);
