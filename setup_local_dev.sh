@@ -40,6 +40,18 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
+# Deploy migrations
+echo ""
+echo "¿Deseas crear las tablas en la base de datos?"
+echo "1. Sí"
+echo "2. No"
+read -p "Seleccione una opción: " OPCION_TABLAS
+
+if [ "$OPCION_TABLAS" == "1" ]; then
+    echo "Ejecutando migraciones..."
+    flask db upgrade
+fi
+
 # Execute Flask in background
 echo "Iniciando servidor Flask en segundo plano..."
 nohup flask run > flask.log 2>&1 &
@@ -56,16 +68,24 @@ sed -i "s|baseURL: .*|baseURL: 'http://127.0.0.1:5000/api',|" "$API_JS_PATH"
 # Execute React in background
 cd frontend || exit 1
 
-echo "Iniciando frontend React en segundo plano..."
+echo "Instalando dependencias con npm ci..."
 npm ci
-nohup npm run dev > react.log 2>&1 &
 
-# Success
-cd ..
+# Open VSC
+echo ""
+echo "¿Deseas abrir Visual Studio Code?"
+echo "1. Sí"
+echo "2. No"
+read -p "Seleccione una opción (1 o 2): " OPCION_CODE
+
+if [ "$OPCION_CODE" == "1" ]; then
+    cd ..
+    code .
+    cd frontend
+fi
 
 echo "========================================="
 echo " ✅ Desarrollo local preparado exitosamente"
-echo " - Flask corriendo en http://127.0.0.1:5000"
-echo " - React corriendo en http://localhost:5175"
 echo "========================================="
 
+npm run dev
