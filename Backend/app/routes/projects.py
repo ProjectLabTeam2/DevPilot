@@ -56,7 +56,7 @@ def update_project(id):
 def delete_project(id):
     project = Project.query.get_or_404(id)
 
-    Task.query.filter_by(project_id=project.id).delete()
+    Task.query.filter_by(project_id=project.id).delete(synchronize_session=False)
 
     db.session.delete(project)
     db.session.commit()
