@@ -1,5 +1,5 @@
 from app import ma
-from marshmallow import fields, validate
+from marshmallow import fields, validate, post_load
 from app.models import User, Project, Task
 
 class UserSchema(ma.SQLAlchemyAutoSchema):
@@ -15,7 +15,11 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
         model = Project
         load_instance = True
 
-    manager_id = fields.Int(required=True)
+    manager = fields.Nested(UserSchema(only=("id", "username")), dump_only=True)
+    members = fields.List(fields.Nested(UserSchema(only=("id", "username"))))
+    all_users = fields.List(fields.Nested(UserSchema(only=("id", "username"))), dump_only=True)
+
+
 
 class TaskSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -23,8 +27,13 @@ class TaskSchema(ma.SQLAlchemyAutoSchema):
         load_instance = True
 
     project_id = fields.Int(required=True)
-    owner_id = fields.Int(required=True)
+    owner_id = fields.Int()
     project = fields.Nested(ProjectSchema, only=("id", "title"))
     owner = fields.Nested(UserSchema, only=("id", "username"))
     status = fields.String(validate=validate.OneOf(["pending", "in_progress", "done"]))
     priority = fields.String(validate=validate.OneOf(["low", "medium", "high"]))
+    due_date = fields.Date(allow_none=True)
+
+    @post_load
+    def set_default_owner(self, data, **kwargs):
+        return data

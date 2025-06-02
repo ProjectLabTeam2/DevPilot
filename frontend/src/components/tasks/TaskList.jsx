@@ -4,10 +4,11 @@ import TaskForm from './TaskForm';
 import './TaskList.css';
 import Swal from 'sweetalert2';
 
-export default function TaskList({ projectId }) {
+export default function TaskList({ projectId, isManager }) {
   const [tasks, setTasks] = useState([]);
-  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
 
   const fetchTasks = async () => {
     try {
@@ -16,6 +17,7 @@ export default function TaskList({ projectId }) {
       setTasks(projectTasks);
     } catch (error) {
       console.error('Error al cargar tareas:', error);
+      Swal.fire('Error', 'No se pudieron cargar las tareas.', 'error');
     } finally {
       setLoading(false);
     }
@@ -27,6 +29,7 @@ export default function TaskList({ projectId }) {
 
   const handleTaskSuccess = () => {
     setShowForm(false);
+    setEditingTask(null);
     fetchTasks();
   };
 
@@ -73,15 +76,6 @@ export default function TaskList({ projectId }) {
     }
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'done': return 'Completada';
-      case 'in_progress': return 'En Progreso';
-      case 'pending': return 'Pendiente';
-      default: return status;
-    }
-  };
-
   const getPriorityText = (priority) => {
     switch (priority) {
       case 'high': return 'Alta';
@@ -97,19 +91,28 @@ export default function TaskList({ projectId }) {
     <div className="tasks">
       <div className="tasks__header">
         <h3>Tareas ({tasks.length})</h3>
-        <button 
-          onClick={() => setShowForm(true)}
-          className="btn btn-primary"
-        >
-          + Añadir Tarea
-        </button>
+        {isManager && (
+          <button 
+            onClick={() => {
+              setEditingTask(null);
+              setShowForm(true);
+            }}
+            className="btn btn-primary"
+          >
+            + Añadir Tarea
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {(showForm || editingTask) && (
         <TaskForm 
-          projectId={projectId} 
+          projectId={projectId}
+          task={editingTask}
           onSuccess={handleTaskSuccess}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingTask(null);
+          }}
         />
       )}
 
@@ -130,19 +133,28 @@ export default function TaskList({ projectId }) {
                   <option value="in_progress">En Progreso</option>
                   <option value="done">Completada</option>
                 </select>
-                <button
-                  onClick={() => handleDeleteTask(task.id)}
-                  className="task-delete"
-                  aria-label="Eliminar tarea"
-                >
-                  ×
-                </button>
+
+                <div className="dropdown">
+                  <button className="task-menu-btn" title="Opciones">⋮</button>
+                  <div className="dropdown-content">
+                    <button onClick={() => {
+                      setEditingTask(task);
+                      setShowForm(true);
+                    }}>Editar</button>
+                    <button onClick={() => handleDeleteTask(task.id)}>Eliminar</button>
+                  </div>
+                </div>
               </div>
+
               <p className="task-description">{task.description}</p>
+
               <div className="task-card__footer">
                 <small>Prioridad: {getPriorityText(task.priority)}</small>
                 {task.due_date && (
                   <small>Vence: {new Date(task.due_date).toLocaleDateString()}</small>
+                )}
+                {task.owner && (
+                  <small>Asignado a: {task.owner.username}</small>
                 )}
               </div>
             </div>

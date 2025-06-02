@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import TaskList from '../tasks/TaskList';
+import InviteForm from '../users/InviteUsersForm';
 import './ProjectDetail.css';
 import Swal from 'sweetalert2';
 
@@ -59,25 +60,19 @@ export default function ProjectDetail() {
       <header className="detail-header">
         <h1>{project.title}</h1>
         <div className="detail-actions">
-          <Link to={`/projects/${id}/edit`} className="btn btn-primary">
-            Editar
-          </Link>
-          <button 
-            onClick={handleDelete}
-            className="btn btn-danger"
-          >
-            Eliminar
-          </button>
-          <Link to="/projects" className="btn btn-secondary">
-            Volver a Proyectos
-          </Link>
+          <Link to={`/projects/${id}/edit`} className="btn btn-primary">Editar</Link>
+          <button onClick={handleDelete} className="btn btn-danger">Eliminar</button>
+          <Link to="/projects" className="btn btn-secondary">Volver a Proyectos</Link>
         </div>
       </header>
+
       <div className="detail-content">
         <p><strong>Descripción:</strong> {project.description}</p>
         <p><strong>Creado:</strong> {new Date(project.created_at).toLocaleDateString()}</p>
       </div>
-      <TaskList projectId={id} />
+
+      <TaskList projectId={id} isManager={project.is_manager} />
+      {project.is_manager && <InviteForm projectId={id} />}
     </div>
   );
 }
