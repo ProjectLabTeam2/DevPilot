@@ -34,7 +34,7 @@ def create_app():
         return jsonify({"msg": "No autorizado"}), 401
 
 
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
 
     from app.routes.users import users_bp

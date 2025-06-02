@@ -31,3 +31,9 @@ def profile():
     user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
     return jsonify(user_schema.dump(user)), 200
+
+@users_bp.route('/get', methods=['GET'])
+@jwt_required()
+def list_users():
+    users = User.query.all()
+    return jsonify(UserSchema(many=True).dump(users)), 200

@@ -1,4 +1,4 @@
-#!/home/john/proyectos/devpilot/Backend/venv/bin/python3
+#!/home/john/proyectos/DevPilot/Backend/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
