@@ -35,8 +35,8 @@ backend/
 
 ### 📦Core Components
 
-| Component         | Description                       |
-| ----------------- | --------------------------------- |
+| Component   | Description                       |
+| ----------- | --------------------------------- |
 | **Models**  | User, Project, Task               |
 | **Schemas** | Data validation and serialization |
 | **Routes**  | REST API endpoints                |
@@ -45,35 +45,73 @@ backend/
 
 ```mermaid
 erDiagram
+    USER {
+        int id PK
+        string username
+        string email
+        text password_hash
+        bool is_admin
+    }
+    PROJECT {
+        int id PK
+        string title
+        text description
+        datetime created_at
+        int manager_id FK
+    }
+    TASK {
+        int id PK
+        text description
+        string status
+        string priority
+        date due_date
+        datetime created_at
+        int project_id FK
+        int owner_id FK
+    }
+    PROJECT_MEMBERS {
+        int user_id FK
+        int project_id FK
+    }
+
+    %% Relaciones Usuario ↔ Proyecto (gestiona y pertenece)
     USER ||--o{ PROJECT : manages
-    USER ||--o{ TASK : owns
+    USER }|..|{ PROJECT_MEMBERS : "invited_projects ⇄ members"
+    PROJECT ||--o{ PROJECT_MEMBERS : ""
+    
+    %% Relaciones Proyecto ↔ Tarea
     PROJECT ||--o{ TASK : contains
+
+    %% Relaciones Usuario ↔ Tarea
+    USER ||--o{ TASK : owns
 ```
 
 ## 🚀API Endpoints
 
 ### 👥Users
 
-| Endpoint                | Method | Description              |
-| ----------------------- | ------ | ------------------------ |
+| Endpoint              | Method | Description              |
+| --------------------- | ------ | ------------------------ |
 | `/api/users/register` | POST   | Register new user        |
 | `/api/users/login`    | POST   | Login and get JWT token  |
 | `/api/users/me`       | GET    | Get current user profile |
+| `/api/users/get`      | GET    | List all users           |
 
 ### 📂Projects
 
-| Endpoint               | Method | Description          |
-| ---------------------- | ------ | -------------------- |
-| `/api/projects`      | POST   | Create new project   |
-| `/api/projects`      | GET    | List user's projects |
-| `/api/projects/<id>` | GET    | Get project details  |
-| `/api/projects/<id>` | PUT    | Update project       |
-| `/api/projects/<id>` | DELETE | Delete project       |
+| Endpoint                    | Method | Description                |
+| --------------------------- | ------ | -------------------------- |
+| `/api/projects`             | POST   | Create new project         |
+| `/api/projects`             | GET    | List user's projects       |
+| `/api/projects/<id>`        | GET    | Get project details        |
+| `/api/projects/<id>`        | PUT    | Update project             |
+| `/api/projects/<id>`        | DELETE | Delete project (and tasks) |
+| `/api/projects/<id>/invite` | POST   | Invite one or more users   |
 
 ### ✅Tasks
 
-| Endpoint            | Method | Description       |
-| ------------------- | ------ | ----------------- |
+| Endpoint          | Method | Description       |
+| ----------------- | ------ | ----------------- |
 | `/api/tasks`      | POST   | Create new task   |
 | `/api/tasks`      | GET    | List user's tasks |
 | `/api/tasks/<id>` | GET    | Get task details  |
