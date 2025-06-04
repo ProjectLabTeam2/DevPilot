@@ -54,6 +54,7 @@ flowchart TD
     Routes --> PrivateRoute
     PrivateRoute --> ProjectList
     PrivateRoute --> ProjectDetail
+    ProjectDetail --> InviteUsersForm
     ProjectDetail --> TaskList
     TaskList --> TaskForm
 ```
@@ -77,10 +78,10 @@ Full list in `package.json`
 
 | Command             | Description              |
 | ------------------- | ------------------------ |
-| `npm run dev`     | Start development server |
-| `npm run build`   | Create production build  |
-| `npm run lint`    | Run ESLint checks        |
-| `npm run preview` | Preview production build |
+| `npm run dev`       | Start development server |
+| `npm run build`     | Create production build  |
+| `npm run lint`      | Run ESLint checks        |
+| `npm run preview`   | Preview production build |
 
 ### Vite Features
 
