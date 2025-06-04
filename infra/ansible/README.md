@@ -9,11 +9,11 @@
 
 Automated infrastructure provisioning for DevPilot application using Ansible playbooks to configure:
 
-- ☁️ AWS EC2 instances
-- 🌐 Nginx web server with HTTPS
-- 🐍 Python/Flask backend
-- ⚛️ React frontend
-- 🔒 SSL certificates
+- ☁️AWS EC2 instances
+- 🌐Nginx web server with HTTPS
+- 🐍Python/Flask backend
+- ⚛️React frontend
+- 🔒SSL certificates
 
 ## Project Structure
 
@@ -25,7 +25,7 @@ infra/ansible/
 └── hosts.ini            # Inventory configuration
 ```
 
-## 🔄 Deployment Workflow
+## 🔄Deployment Workflow
 
 ```mermaid
 sequenceDiagram
@@ -37,7 +37,7 @@ sequenceDiagram
     Ansible->>Systemd: Configure Gunicorn Service
 ```
 
-## 🛠️ Playbook Details
+## 🛠️Playbook Details
 
 ### webserver.yml
 
@@ -66,17 +66,7 @@ sequenceDiagram
 * Database connection test
 * Schema validation
 
-## 🔒 Security Features
-
-* Encrypted SSH access
-* Minimal permission model (0600 for .env)
-* Automated certificate renewal
-* Secure Nginx configuration:
-  * TLS 1.2/1.3 only
-  * Secure cipher suites
-  * HTTP → HTTPS redirect
-
-## 🚀 Deployment Guide
+## 🚀Deployment Guide
 
 ### Prerequisites
 
@@ -118,7 +108,7 @@ journalctl -u gunicorn -f
 tail -f /var/log/nginx/error.log
 ```
 
-## 📊 Architecture Diagram
+## 📊Architecture Diagram
 
 ```mermaid
 flowchart TD
@@ -130,3 +120,13 @@ flowchart TD
     F --> G[Flask App]
     G --> H[RDS PostgreSQL]
 ```
+
+## 🔒Security Features
+
+* Encrypted SSH access
+* Minimal permission model (0600 for .env)
+* Automated certificate renewal
+* Secure Nginx configuration:
+  * TLS 1.2/1.3 only
+  * Secure cipher suites
+  * HTTP → HTTPS redirect

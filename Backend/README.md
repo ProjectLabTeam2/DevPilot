@@ -10,7 +10,7 @@ This backend system is built with Flask and provides a RESTful API for managing 
 
 ## Project Structure
 
-```
+```bash
 backend/
 ├── app/
 │ ├── routes/ 		# API endpoint definitions
@@ -35,8 +35,8 @@ backend/
 
 ### 📦Core Components
 
-| Component   | Description                       |
-| ----------- | --------------------------------- |
+| Component         | Description                       |
+| ----------------- | --------------------------------- |
 | **Models**  | User, Project, Task               |
 | **Schemas** | Data validation and serialization |
 | **Routes**  | REST API endpoints                |
@@ -78,7 +78,7 @@ erDiagram
     USER ||--o{ PROJECT : manages
     USER }|..|{ PROJECT_MEMBERS : "invited_projects ⇄ members"
     PROJECT ||--o{ PROJECT_MEMBERS : ""
-    
+  
     %% Relaciones Proyecto ↔ Tarea
     PROJECT ||--o{ TASK : contains
 
@@ -90,8 +90,8 @@ erDiagram
 
 ### 👥Users
 
-| Endpoint              | Method | Description              |
-| --------------------- | ------ | ------------------------ |
+| Endpoint                | Method | Description              |
+| ----------------------- | ------ | ------------------------ |
 | `/api/users/register` | POST   | Register new user        |
 | `/api/users/login`    | POST   | Login and get JWT token  |
 | `/api/users/me`       | GET    | Get current user profile |
@@ -99,8 +99,8 @@ erDiagram
 
 ### 📂Projects
 
-| Endpoint                    | Method | Description                |
-| --------------------------- | ------ | -------------------------- |
+| Endpoint                      | Method | Description                |
+| ----------------------------- | ------ | -------------------------- |
 | `/api/projects`             | POST   | Create new project         |
 | `/api/projects`             | GET    | List user's projects       |
 | `/api/projects/<id>`        | GET    | Get project details        |
@@ -110,8 +110,8 @@ erDiagram
 
 ### ✅Tasks
 
-| Endpoint          | Method | Description       |
-| ----------------- | ------ | ----------------- |
+| Endpoint            | Method | Description       |
+| ------------------- | ------ | ----------------- |
 | `/api/tasks`      | POST   | Create new task   |
 | `/api/tasks`      | GET    | List user's tasks |
 | `/api/tasks/<id>` | GET    | Get task details  |

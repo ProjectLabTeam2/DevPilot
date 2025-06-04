@@ -104,7 +104,7 @@ flowchart TD
     E --> G[Gunicorn/Flask]
 ```
 
-## 🔒 Security Features
+## 🔒Security Features
 
 * JWT authentication
 * Protected routes
