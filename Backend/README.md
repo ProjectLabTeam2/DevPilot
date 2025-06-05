@@ -143,7 +143,7 @@ flask run
 ### Testing
 
 ```
-pytest test/
+python -m pytest test/
 ```
 
 ## 🚀Deployment
