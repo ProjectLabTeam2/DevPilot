@@ -5,12 +5,20 @@ pipeline {
   }
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
     stage('Tests Backend') {
       steps {
         dir('Backend') {
-          sh 'source venv/bin/activate && pytest'
+          // Usamos bash explícitamente para evitar el error con `source`
+          sh '''#!/bin/bash
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+            pytest
+          '''
         }
       }
     }
