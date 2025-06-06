@@ -93,9 +93,7 @@ flowchart LR
 1. **Infrastructure Provisioning**
 2. **Dependency Installation**
 3. **Application Build**
-4. **Automated Testing**
-5. **Security Scanning**
-6. **Deployment**
+4. **Deployment**
 
 ## 💻Local Development
 
