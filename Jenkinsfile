@@ -9,22 +9,10 @@ pipeline {
         checkout scm
       }
     }
-    stage('Setup Backend') {
+    stage('Ansible Deploy') {
       steps {
-        dir('Backend') {
-          sh '''#!/bin/bash
-            rm -rf venv
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
-          '''
-        }
-      }
-    }
-    stage('Setup Frontend') {
-      steps {
-        dir('frontend') {
-          sh 'npm ci'
+        dir('infra/ansible') {
+          sh 'ansible-playbook -i hosts.ini playbooks/webserver.yml'
         }
       }
     }
