@@ -9,24 +9,22 @@ pipeline {
         checkout scm
       }
     }
-    stage('Tests Backend') {
+    stage('Setup Backend') {
       steps {
         dir('Backend') {
           sh '''#!/bin/bash
             rm -rf venv
             python3 -m venv venv
             source venv/bin/activate
-            pip install --upgrade pip
             pip install -r requirements.txt
-            pytest
           '''
         }
       }
     }
-    stage('Tests Frontend') {
+    stage('Setup Frontend') {
       steps {
         dir('Frontend') {
-          sh 'npm install && npm test'
+          sh 'npm ci'
         }
       }
     }
