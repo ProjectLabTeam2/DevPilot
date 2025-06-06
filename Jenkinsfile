@@ -23,35 +23,8 @@ pipeline {
     }
     stage('Setup Frontend') {
       steps {
-        dir('Frontend') {
+        dir('frontend') {
           sh 'npm ci'
-        }
-      }
-    }
-    stage('Terraform Init & Plan') {
-      steps {
-        dir("${env.TF_WORKDIR}") {
-          sh 'terraform init'
-          sh 'terraform plan -out=devpilot.plan'
-        }
-      }
-    }
-    stage('Manual Approval') {
-      steps {
-        input message: "¿Aprobar Terraform plan?"
-      }
-    }
-    stage('Terraform Apply') {
-      steps {
-        dir("${env.TF_WORKDIR}") {
-          sh 'terraform apply "devpilot.plan"'
-        }
-      }
-    }
-    stage('Ansible Deploy') {
-      steps {
-        dir('infra/ansible') {
-          sh 'ansible-playbook -i hosts.ini playbooks/webserver.yml'
         }
       }
     }
