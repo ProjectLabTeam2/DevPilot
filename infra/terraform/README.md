@@ -68,7 +68,6 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    EC2 --> EIP
     EC2 -->|uses| SG_Web
     EC2 -->|in| PublicSubnet
 ```
@@ -76,8 +75,7 @@ flowchart LR
 **Configuration** :
 
 * Instance Type: t2.micro
-* AMI: Ubuntu 22.04 LTS
-* Elastic IP attachment
+* AMI: Ubuntu 24.04 LTS
 * SSH key access
 
 ### 3. RDS Module
