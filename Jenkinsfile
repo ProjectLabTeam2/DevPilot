@@ -1,8 +1,6 @@
 pipeline {
   agent any
-  environment {
-    TF_WORKDIR = "infra/terraform"
-  }
+
   stages {
     stage('Checkout') {
       steps {
