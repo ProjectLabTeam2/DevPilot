@@ -84,9 +84,7 @@ chmod +x setup_local_dev.sh
 ```mermaid
 flowchart LR
     A[Git Push] --> B[Jenkins]
-    B --> C[Terraform Apply]
     B --> D[Ansible Config]
-    B --> E[Run Tests]
     B --> F[Deploy to AWS]
 ```
 
