@@ -1,0 +1,128 @@
+- name: Actualizar caché de APT
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Instalar paquetes requeridos
+  apt:
+    name:
+      - gnupg
+      - curl
+      - openjdk-17-jdk
+      - apt-transport-https
+      - software-properties-common
+      - certbot
+      - python3-certbot-nginx
+      - nginx
+      - ufw
+    state: present
+
+- name: Eliminar repositorio Jenkins anterior si existe
+  file:
+    path: /etc/apt/sources.list.d/jenkins.list
+    state: absent
+
+- name: Eliminar clave GPG anterior si existe
+  file:
+    path: /usr/share/keyrings/jenkins-keyring.gpg
+    state: absent
+
+- name: Crear directorio para claves GPG si no existe
+  file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Descargar y guardar clave GPG moderna de Jenkins
+  get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    dest: /usr/share/keyrings/jenkins-keyring.asc
+    mode: '0644'
+
+- name: Agregar repositorio Jenkins con clave moderna firmada
+  copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/
+    mode: '0644'
+
+- name: Actualizar caché APT
+  apt:
+    update_cache: yes
+
+- name: Instalar Jenkins
+  apt:
+    name: jenkins
+    state: latest
+    update_cache: yes
+
+- name: Habilitar y arrancar Jenkins
+  systemd:
+    name: jenkins
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Esperar a que Jenkins esté disponible en el puerto 8080
+  wait_for:
+    port: 8080
+    state: started
+    delay: 5
+    timeout: 300
+
+- name: Permitir puertos HTTP, HTTPS y Jenkins en UFW
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+  loop:
+    - "80"
+    - "443"
+    - "8080"
+
+- name: Crear archivo de configuración NGINX para Jenkins
+  copy:
+    dest: /etc/nginx/sites-available/jenkins
+    content: |
+      server {
+          listen 80;
+          server_name {{ jenkins_domain }};
+
+          location / {
+              proxy_pass http://localhost:8080;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+- name: Activar configuración de NGINX para Jenkins
+  file:
+    src: /etc/nginx/sites-available/jenkins
+    dest: /etc/nginx/sites-enabled/jenkins
+    state: link
+    force: yes
+
+- name: Eliminar sitio por defecto de NGINX si existe
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Recargar NGINX
+  systemd:
+    name: nginx
+    state: restarted
+    enabled: yes
+
+- name: Obtener certificado SSL con Certbot
+  shell: >
+    certbot --nginx -n --agree-tos --redirect
+    --email {{ certbot_email }}
+    -d {{ jenkins_domain }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ jenkins_domain }}"
+
+- name: Asegurar que Jenkins se inicie al arrancar
+  systemd:
+    name: jenkins
+    enabled: yes

@@ -60,7 +60,7 @@ resource "aws_security_group" "sg_web" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.my_office_ip , "181.142.123.92/32" , "179.1.224.10/32"]
+    cidr_blocks = [var.my_office_ip , "181.142.123.92/32" , "179.1.224.10/32" ,"34.41.96.53/32"]
   }
   ingress {
     from_port   = 80
@@ -68,12 +68,7 @@ resource "aws_security_group" "sg_web" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -115,3 +110,4 @@ output "public_subnet_ids"  { value = aws_subnet.public[*].id }
 output "private_subnet_ids" { value = aws_subnet.private[*].id }
 output "sg_web_id"         { value = aws_security_group.sg_web.id }
 output "sg_db_id"          { value = aws_security_group.sg_db.id }
+output "vpc_id" {value = aws_vpc.this.id}

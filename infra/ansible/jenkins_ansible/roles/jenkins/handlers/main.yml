@@ -1,0 +1,9 @@
+- name: restart jenkins
+  systemd:
+    name: jenkins
+    state: restarted
+
+- name: reload nginx
+  systemd:
+    name: nginx
+    state: reloaded

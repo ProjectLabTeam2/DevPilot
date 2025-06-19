@@ -8,3 +8,4 @@ resource "aws_instance" "app" {
 
   tags = { Name = "DevPilot-App-EC2" }
 }
+output "app_instance_id" {value = aws_instance.app.id}

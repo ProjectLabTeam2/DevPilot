@@ -31,5 +31,15 @@ variable "key_name" {
 variable "my_office_ip" {
   description = "Tu IP pública/CIDR para SSH"
   type        = string
-  default     = "181.128.89.61/32"
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN del certificado emitido por ACM para HTTPS"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Nombre del dominio principal"
+  type        = string
+  default     = "devpilot.online"
 }

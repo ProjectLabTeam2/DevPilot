@@ -1,0 +1,6 @@
+- name: Setup Jenkins Server with HTTPS
+  hosts: jenkins
+  become: yes
+
+  roles:
+    - jenkins

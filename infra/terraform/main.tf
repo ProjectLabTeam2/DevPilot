@@ -20,3 +20,19 @@ module "rds" {
   db_user_param      = "/DevPilot/DB_USER_johnki"
   db_pass_param      = "/DevPilot/DB_PASSWORD_johnki"
 }
+
+module "alb" {
+  source               = "./modules/alb"
+  vpc_id               = module.networking.vpc_id
+  public_subnet_ids    = module.networking.public_subnet_ids
+  sg_web_id            = module.networking.sg_web_id
+  acm_certificate_arn  = var.acm_certificate_arn
+  instance_id          = module.ec2.app_instance_id
+}
+
+module "route53" {
+  source         = "./modules/route53"
+  domain_name    = "devpilot.online"
+  alb_dns_name   = module.alb.alb_dns_name
+  alb_zone_id    = module.alb.alb_zone_id
+}
