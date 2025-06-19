@@ -106,10 +106,10 @@
         DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
         DB_NAME: devpilotdb
 
-    - name: Construir frontend con npm
+    - name: Construir frontend con npm y vite
       shell: |
-        npm ci
-        npm run build
+        npm install
+        npx vite build
       args:
         chdir: "{{ frontend_dir }}"
         creates: "{{ frontend_dir }}/dist"
