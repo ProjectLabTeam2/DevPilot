@@ -1,5 +1,5 @@
 ---
-- name: Configurar EC2 para DevPilot (Flask + React) detrás de ALB
+- name: Desplegar DevPilot (Flask + React) detrás de Nginx y Gunicorn
   hosts: web
   become: true
 
@@ -8,10 +8,59 @@
     backend_dir: "{{ app_root }}/Backend"
     frontend_dir: "{{ app_root }}/frontend"
     venv_dir: "{{ backend_dir }}/venv"
-    domain: "devpilot.online"
 
   tasks:
-    - name: Instalar paquetes del sistema
+    - name: Limpiar Gunicorn anterior
+      block:
+        - name: Detener Gunicorn
+          systemd:
+            name: gunicorn
+            state: stopped
+          ignore_errors: yes
+
+        - name: Eliminar servicio de Gunicorn
+          file:
+            path: /etc/systemd/system/gunicorn.service
+            state: absent
+
+        - name: Recargar systemd
+          systemd:
+            daemon_reload: yes
+
+    - name: Limpiar configuración previa de Nginx
+      block:
+        - name: Detener Nginx
+          systemd:
+            name: nginx
+            state: stopped
+          ignore_errors: yes
+
+        - name: Eliminar configuración de sitios disponibles
+          file:
+            path: /etc/nginx/sites-available
+            state: absent
+
+        - name: Eliminar configuración de sitios habilitados
+          file:
+            path: /etc/nginx/sites-enabled
+            state: absent
+
+        - name: Recrear directorios
+          file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+          loop:
+            - /etc/nginx/sites-available
+            - /etc/nginx/sites-enabled
+
+        - name: Reiniciar Nginx
+          systemd:
+            name: nginx
+            state: started
+            enabled: true
+
+    - name: Instalar dependencias del sistema
       apt:
         name:
           - openjdk-17-jdk
@@ -22,15 +71,8 @@
           - nodejs
           - npm
         update_cache: yes
-        state: latest
 
-    - name: Eliminar directorio existente si hay problemas de permisos
-      file:
-        path: "{{ app_root }}"
-        state: absent
-      ignore_errors: yes
-
-    - name: Clonar repositorio DevPilot
+    - name: Clonar DevPilot
       git:
         repo: 'https://github.com/ProjectLabTeam2/DevPilot.git'
         dest: "{{ app_root }}"
@@ -38,41 +80,28 @@
         force: yes
       become_user: ubuntu
 
-    - name: Eliminar virtualenv si está corrupto
-      file:
-        path: "{{ venv_dir }}"
-        state: absent
-      ignore_errors: yes
-
-    - name: Crear virtualenv
+    - name: Crear entorno virtual limpio
       shell: |
-        cd "{{ backend_dir }}"
+        rm -rf "{{ venv_dir }}"
         python3 -m venv venv
       args:
-        creates: "{{ venv_dir }}/bin/activate"
+        chdir: "{{ backend_dir }}"
       become_user: ubuntu
 
-    - name: Actualizar pip en el virtualenv
-      pip:
-        name: pip
-        state: latest
-        virtualenv: "{{ venv_dir }}"
-      become_user: ubuntu
-
-    - name: Instalar dependencias desde requirements.txt
+    - name: Actualizar pip e instalar requirements
       pip:
         requirements: "{{ backend_dir }}/requirements.txt"
         virtualenv: "{{ venv_dir }}"
       become_user: ubuntu
 
-    - name: Instalar gunicorn en el virtualenv
+    - name: Instalar Gunicorn
       pip:
         name: gunicorn
         state: present
         virtualenv: "{{ venv_dir }}"
       become_user: ubuntu
 
-    - name: Copiar archivo .env al servidor
+    - name: Crear archivo .env
       copy:
         dest: "{{ backend_dir }}/.env"
         content: |
@@ -87,85 +116,76 @@
         group: ubuntu
         mode: '0600'
 
-    - name: Ejecutar flask db upgrade
+    - name: Ejecutar migraciones de base de datos
       shell: |
-        cd "{{ backend_dir }}"
         "{{ venv_dir }}/bin/flask" db upgrade
       args:
+        chdir: "{{ backend_dir }}"
         executable: /bin/bash
       become_user: ubuntu
       environment:
         FLASK_ENV: production
         FLASK_APP: run.py
-        SECRET_KEY: "{{ lookup('env','SECRET_KEY') | default('dev-secret-key') }}"
-        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') | default('dev-jwt-key') }}"
-        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') | default('localhost') }}"
-        DB_USER: "{{ lookup('env','DB_USER') | default('postgres') }}"
-        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') | default('password') }}"
+        SECRET_KEY: "{{ lookup('env','SECRET_KEY') }}"
+        JWT_SECRET_KEY: "{{ lookup('env','JWT_SECRET_KEY') }}"
+        DB_HOST: "{{ lookup('env','RDS_ENDPOINT') }}"
+        DB_USER: "{{ lookup('env','DB_USER') }}"
+        DB_PASSWORD: "{{ lookup('env','DB_PASSWORD') }}"
         DB_NAME: devpilotdb
 
-    - name: Construir frontend con npm
+    - name: Construir frontend
       shell: |
         npm ci
         npm run build
       args:
         chdir: "{{ frontend_dir }}"
-        creates: "{{ frontend_dir }}/dist"
       become_user: ubuntu
 
-    - name: Dar permisos de lectura al frontend para Nginx
-      shell: |
-        chmod -R o+r "{{ frontend_dir }}/dist"
-        find "{{ frontend_dir }}/dist" -type d -exec chmod o+x {} \;
-      args:
-        executable: /bin/bash
-
-    - name: Configurar Nginx para servir la app (usando dist directamente)
+    - name: Crear configuración Nginx para DevPilot
       copy:
         dest: /etc/nginx/sites-available/devpilot
         content: |
           server {
-            listen 80;
-            server_name _;
+              listen 80;
+              server_name _;
 
-            root {{ frontend_dir }}/dist;
-            index index.html;
+              root {{ frontend_dir }}/dist;
+              index index.html;
 
-            # 🔥 Corregido: sin /api/ al final de proxy_pass
-            location /api/ {
-              proxy_pass http://127.0.0.1:5512/;
-              proxy_http_version 1.1;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-            }
+              location /api/ {
+                  proxy_pass http://127.0.0.1:5512/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
 
-            location / {
-              try_files $uri /index.html;
-            }
+              location / {
+                  try_files $uri /index.html;
+              }
 
-            error_page 404 /index.html;
+              error_page 404 /index.html;
           }
-      notify:
-        - Enable Nginx site
 
-
-    - name: Disable default Nginx site
+    - name: Habilitar sitio devpilot en Nginx
       file:
-        path: /etc/nginx/sites-enabled/default
-        state: absent
-      notify:
-        - Reload Nginx
+        src: /etc/nginx/sites-available/devpilot
+        dest: /etc/nginx/sites-enabled/devpilot
+        state: link
 
-    - name: Asegurar permisos adecuados para el archivo .env
-      file:
-        path: "{{ backend_dir }}/.env"
-        mode: '0644'
-        owner: ubuntu
-        group: ubuntu
+    - name: Validar configuración de Nginx
+      shell: nginx -t
+      register: nginx_test
+      failed_when: "'successful' not in nginx_test.stderr"
 
-    - name: Crear servicio systemd para Gunicorn
+    - name: Reiniciar Nginx
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: true
+
+    - name: Crear servicio Gunicorn
       copy:
         dest: /etc/systemd/system/gunicorn.service
         content: |
@@ -182,35 +202,19 @@
 
           [Install]
           WantedBy=multi-user.target
-      notify:
-        - Reload systemd
 
-    - name: Iniciar Gunicorn
+    - name: Recargar y arrancar Gunicorn
       systemd:
+        daemon_reload: yes
         name: gunicorn
         state: started
         enabled: yes
 
-    - name: Recargar Nginx tras configurar HTTP
-      service:
-        name: nginx
-        state: reloaded
-
-  handlers:
-    - name: Enable Nginx site
-      file:
-        src: /etc/nginx/sites-available/devpilot
-        dest: /etc/nginx/sites-enabled/devpilot
-        state: link
-
-    - name: Reload Nginx
-      service:
-        name: nginx
-        state: reloaded
-
-    - name: Reload systemd
-      systemd:
-        daemon_reload: yes
-        name: gunicorn
-        state: restarted
-        enabled: yes
+    - name: Verificar que Nginx responde en puerto 80
+      uri:
+        url: http://localhost/api/health
+        status_code: 200
+      register: nginx_healthcheck
+      retries: 5
+      delay: 3
+      until: nginx_healthcheck.status == 200

@@ -40,9 +40,11 @@ def create_app():
     from app.routes.users import users_bp
     from app.routes.projects import projects_bp
     from app.routes.tasks import tasks_bp
+    from app.routes.health import health_bp
 
     app.register_blueprint(users_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(health_bp)
 
     return app
