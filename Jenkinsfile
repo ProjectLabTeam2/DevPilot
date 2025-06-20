@@ -117,11 +117,22 @@ EOF
       }
     }
 
-    stage('Frontend: Build') {
+    stage('Frontend: Tests') {
+      agent { label 'test-agent' }
       steps {
         dir("${FRONTEND_DIR}") {
           sh '''
             npm ci
+            npm test -- --watchAll=false
+          '''
+        }
+      }
+    }
+
+    stage('Frontend: Build') {
+      steps {
+        dir("${FRONTEND_DIR}") {
+          sh '''
             npm run build
           '''
         }
