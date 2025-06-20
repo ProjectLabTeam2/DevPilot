@@ -4,7 +4,7 @@ import gzip
 import base64
 import urllib3
 
-http = urllib3.PoolManager(cert_reqs='CERT_NONE') 
+http = urllib3.PoolManager(cert_reqs='CERT_NONE')
 
 def lambda_handler(event, context):
     print("🟡 Evento recibido:", json.dumps(event))
@@ -30,5 +30,9 @@ def lambda_handler(event, context):
                 "Content-Type": "application/json"
             }
         )
+
+        print("📤 Enviado a Splunk:", body)
+        print("📥 Respuesta de Splunk:", response.status, response.data.decode())
+
 
     return {"statusCode": 200}
