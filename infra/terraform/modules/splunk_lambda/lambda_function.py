@@ -4,9 +4,10 @@ import gzip
 import base64
 import urllib3
 
-http = urllib3.PoolManager()
+http = urllib3.PoolManager(cert_reqs='CERT_NONE') 
 
 def lambda_handler(event, context):
+    print("🟡 Evento recibido:", json.dumps(event))
     data = gzip.decompress(base64.b64decode(event['awslogs']['data']))
     payload = json.loads(data)
 
