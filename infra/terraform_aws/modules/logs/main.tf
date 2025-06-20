@@ -14,7 +14,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_logs_lifecycle" {
     id     = "delete-old-logs"
     status = "Enabled"
 
-    # Este filtro es obligatorio aunque sea vacío
     filter {
       prefix = ""
     }

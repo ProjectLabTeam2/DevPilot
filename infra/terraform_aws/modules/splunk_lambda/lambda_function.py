@@ -31,8 +31,5 @@ def lambda_handler(event, context):
             }
         )
 
-        print("📤 Enviado a Splunk:", body)
-        print("📥 Respuesta de Splunk:", response.status, response.data.decode())
-
 
     return {"statusCode": 200}
