@@ -1,21 +1,21 @@
-import pytest
-from app import create_app, db
-from app.models import User
+def test_register_user(client):
+    response = client.post('/api/users/register', json={
+        'username': 'tester',
+        'email': 'tester@mail.com',
+        'password': '12345678'
+    })
+    assert response.status_code == 201
+    assert 'id' in response.json
 
-@pytest.fixture
-def client():
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-
-def test_register_and_login(client):
-    # Registro
-    resp = client.post('/api/users/register', json={'username':'test','email':'test@test.com','password':'123456'})
-    assert resp.status_code == 201
-    # Login
-    resp = client.post('/api/users/login', json={'username':'test','password':'123456'})
-    assert 'access_token' in resp.get_json()
+def test_login_user(client):
+    client.post('/api/users/register', json={
+        'username': 'tester',
+        'email': 'tester@mail.com',
+        'password': '12345678'
+    })
+    response = client.post('/api/users/login', json={
+        'username': 'tester',
+        'password': '12345678'
+    })
+    assert response.status_code == 200
+    assert 'access_token' in response.json

@@ -13,11 +13,15 @@ jwt = JWTManager()
 
 ma = Marshmallow()
 
-def create_app():
+def create_app(config_name=None):
     load_dotenv(override=True)
     app = Flask(__name__)
-    app.config.from_object('app.config.Config')
 
+    if config_name == 'testing':
+        app.config.from_object('app.config.TestingConfig')
+    else:
+        app.config.from_object('app.config.Config')
+        
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)

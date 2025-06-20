@@ -66,6 +66,19 @@ EOF
       }
     }
 
+    stage('Backend: Tests') {
+      agent { label 'test-agent' }
+      steps {
+        dir("${BACKEND_DIR}") {
+          sh '''
+            . venv/bin/activate
+            pytest
+            deactivate
+          '''
+        }
+      }
+    }
+
     stage('Backend: Crear servicio Gunicorn') {
       steps {
         sh '''

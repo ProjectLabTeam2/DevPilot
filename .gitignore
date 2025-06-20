@@ -2,3 +2,6 @@
 .env
 .env.production
 ,terraform.tfvars
+venv
+__pycache__
+.pytest_cache
