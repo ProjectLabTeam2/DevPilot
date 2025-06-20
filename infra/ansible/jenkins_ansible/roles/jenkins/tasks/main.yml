@@ -56,7 +56,7 @@
     state: latest
     update_cache: yes
 
-- name: Aumentar tiempo de arranque permitido para Jenkins (TimeoutStartSec=600)
+- name: Aumentar tiempo de arranque permitido para Jenkins
   blockinfile:
     path: /etc/systemd/system/jenkins.service.d/override.conf
     create: yes

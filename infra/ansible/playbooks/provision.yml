@@ -1,0 +1,101 @@
+---
+- name: Provisionar instancia EC2 para DevPilot
+  hosts: web
+  become: true
+
+  vars:
+    app_root: /home/ubuntu/DevPilot
+    frontend_dir: "{{ app_root }}/frontend"
+
+  tasks:
+    - name: Instalar dependencias del sistema
+      apt:
+        name:
+          - openjdk-17-jdk
+          - python3-venv
+          - python3-pip
+          - git
+          - nginx
+          - nodejs
+          - npm
+        update_cache: yes
+
+    - name: Limpiar configuración previa de Nginx
+      block:
+        - name: Detener Nginx
+          systemd:
+            name: nginx
+            state: stopped
+          ignore_errors: yes
+
+        - name: Eliminar configuración de sitios disponibles
+          file:
+            path: /etc/nginx/sites-available
+            state: absent
+
+        - name: Eliminar configuración de sitios habilitados
+          file:
+            path: /etc/nginx/sites-enabled
+            state: absent
+
+        - name: Recrear directorios
+          file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+          loop:
+            - /etc/nginx/sites-available
+            - /etc/nginx/sites-enabled
+
+        - name: Reiniciar Nginx
+          systemd:
+            name: nginx
+            state: started
+            enabled: true
+
+    - name: Crear configuración Nginx para DevPilot
+      copy:
+        dest: /etc/nginx/sites-available/devpilot
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              root {{ frontend_dir }}/dist;
+              index index.html;
+
+              location /api {
+                  proxy_pass http://127.0.0.1:5512;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+
+              location / {
+                  try_files $uri /index.html;
+              }
+
+              error_page 404 /index.html;
+          }
+
+    - name: Habilitar sitio
+      file:
+        src: /etc/nginx/sites-available/devpilot
+        dest: /etc/nginx/sites-enabled/devpilot
+        state: link
+
+    - name: Validar configuración de Nginx
+      shell: nginx -t
+      register: nginx_test
+      failed_when: "'successful' not in nginx_test.stderr"
+
+    - name: Verificar que Nginx responde
+      uri:
+        url: http://localhost/api/health
+        status_code: 200
+      register: nginx_healthcheck
+      retries: 5
+      delay: 3
+      until: nginx_healthcheck.status == 200
