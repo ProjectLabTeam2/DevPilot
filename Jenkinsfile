@@ -37,15 +37,15 @@ pipeline {
       steps {
         dir("${BACKEND_DIR}") {
           sh '''
-            cat <<EOF > .env
-    FLASK_ENV=production
-    SECRET_KEY=${SECRET_KEY}
-    JWT_SECRET_KEY=${JWT_SECRET_KEY}
-    DB_HOST=${RDS_ENDPOINT}
-    DB_USER=${DB_USER}
-    DB_PASSWORD=${DB_PASSWORD}
-    DB_NAME=devpilotdb
-    EOF
+            cat > .env <<EOF
+FLASK_ENV=production
+SECRET_KEY=${SECRET_KEY}
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
+DB_HOST=${RDS_ENDPOINT}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=devpilotdb
+EOF
           '''
         }
       }
