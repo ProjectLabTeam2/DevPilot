@@ -37,7 +37,7 @@ pipeline {
       steps {
         dir("${BACKEND_DIR}") {
           sh '''
-            cat > .env <<EOF
+            cat <<EOF > .env
     FLASK_ENV=production
     SECRET_KEY=${SECRET_KEY}
     JWT_SECRET_KEY=${JWT_SECRET_KEY}
