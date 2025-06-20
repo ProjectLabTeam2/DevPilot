@@ -1,2 +1,6 @@
 acm_certificate_arn = "arn:aws:acm:us-east-1:445489674144:certificate/a28b54a3-464d-480a-9b39-10ee82297f76"
 my_office_ip = "181.128.25.126/32"
+alb_logs_bucket_name = "devpilot-alb-logs"
+instance_id = "i-05e11adf31fe4e519"
+splunk_hec_url   = "https://prd-p-re2vf.splunkcloud.com:8088"
+splunk_hec_token = "03997c8d-ff02-4f98-b6c5-eb762be7ba9c"

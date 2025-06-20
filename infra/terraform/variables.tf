@@ -43,3 +43,25 @@ variable "domain_name" {
   type        = string
   default     = "devpilot.online"
 }
+
+variable "alb_logs_bucket_name" {
+  type        = string
+  description = "Nombre del bucket para los logs del ALB"
+}
+
+variable "instance_id" {
+  type        = string
+  description = "ID de la instancia EC2 para la alarma de CPU"
+}
+
+variable "splunk_hec_url" {
+  type        = string
+  description = "URL del endpoint HEC de Splunk"
+  sensitive   = true
+}
+
+variable "splunk_hec_token" {
+  type        = string
+  description = "Token HEC de autenticación para Splunk"
+  sensitive   = true
+}

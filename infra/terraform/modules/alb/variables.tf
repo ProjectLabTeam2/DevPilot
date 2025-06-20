@@ -22,3 +22,7 @@ variable "instance_id" {
   description = "ID de la instancia EC2 del backend"
   type        = string
 }
+
+variable "alb_logs_bucket_name" {
+  type = string
+}

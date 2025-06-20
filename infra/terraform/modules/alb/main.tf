@@ -10,6 +10,12 @@ resource "aws_lb" "devpilot_alb" {
   tags = {
     Name = "DevPilot-ALB"
   }
+
+    access_logs {
+    bucket  = var.alb_logs_bucket_name
+    enabled = true
+  }
+
 }
 
 resource "aws_lb_target_group" "devpilot_tg" {

@@ -56,19 +56,30 @@
     state: latest
     update_cache: yes
 
+- name: Aumentar tiempo de arranque permitido para Jenkins (TimeoutStartSec=600)
+  blockinfile:
+    path: /etc/systemd/system/jenkins.service.d/override.conf
+    create: yes
+    block: |
+      [Service]
+      TimeoutStartSec=600
+
+- name: Recargar demonio de systemd
+  systemd:
+    daemon_reload: yes
+
 - name: Habilitar y arrancar Jenkins
   systemd:
     name: jenkins
     enabled: yes
     state: started
-    daemon_reload: yes
 
 - name: Esperar a que Jenkins esté disponible en el puerto 8080
   wait_for:
     port: 8080
     state: started
     delay: 5
-    timeout: 300
+    timeout: 600
 
 - name: Permitir puertos HTTP, HTTPS y Jenkins en UFW
   ufw:
@@ -121,6 +132,14 @@
     -d {{ jenkins_domain }}
   args:
     creates: "/etc/letsencrypt/live/{{ jenkins_domain }}"
+
+- name: Crear hook de renovación para recargar NGINX tras renovación de Certbot
+  copy:
+    dest: /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+    content: |
+      #!/bin/sh
+      systemctl reload nginx
+    mode: '0755'
 
 - name: Asegurar que Jenkins se inicie al arrancar
   systemd:
