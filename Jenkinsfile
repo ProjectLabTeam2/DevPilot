@@ -70,20 +70,20 @@ EOF
       steps {
         sh '''
           sudo tee /etc/systemd/system/gunicorn.service > /dev/null <<EOF
-          [Unit]
-          Description=Gunicorn for DevPilot
-          After=network.target
+[Unit]
+Description=Gunicorn for DevPilot
+After=network.target
 
-          [Service]
-          User=ubuntu
-          WorkingDirectory=${BACKEND_DIR}
-          EnvironmentFile=${BACKEND_DIR}/.env
-          ExecStart=${BACKEND_DIR}/venv/bin/gunicorn -w 3 -b 127.0.0.1:5512 run:app
-          Restart=always
+[Service]
+User=ubuntu
+WorkingDirectory=${BACKEND_DIR}
+EnvironmentFile=${BACKEND_DIR}/.env
+ExecStart=${BACKEND_DIR}/venv/bin/gunicorn -w 3 -b 127.0.0.1:5512 run:app
+Restart=always
 
-          [Install]
-          WantedBy=multi-user.target
-          EOF
+[Install]
+WantedBy=multi-user.target
+EOF
         '''
       }
     }
