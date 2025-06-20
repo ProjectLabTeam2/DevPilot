@@ -123,7 +123,7 @@ EOF
         dir("${FRONTEND_DIR}") {
           sh '''
             npm ci
-            npm test -- --watchAll=false
+            npm run test -- --run
           '''
         }
       }
