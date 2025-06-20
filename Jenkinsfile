@@ -38,14 +38,14 @@ pipeline {
         dir("${BACKEND_DIR}") {
           sh '''
             cat > .env <<EOF
-            FLASK_ENV=production
-            SECRET_KEY=${SECRET_KEY}
-            JWT_SECRET_KEY=${JWT_SECRET_KEY}
-            DB_HOST=${RDS_ENDPOINT}
-            DB_USER=${DB_USER}
-            DB_PASSWORD=${DB_PASSWORD}
-            DB_NAME=devpilotdb
-            EOF
+    FLASK_ENV=production
+    SECRET_KEY=${SECRET_KEY}
+    JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    DB_HOST=${RDS_ENDPOINT}
+    DB_USER=${DB_USER}
+    DB_PASSWORD=${DB_PASSWORD}
+    DB_NAME=devpilotdb
+    EOF
           '''
         }
       }
@@ -137,23 +137,23 @@ pipeline {
       }
     }
   }
-}
 
-post {
-  success {
-    sh '''
-      curl -H "Content-Type: application/json" \
-      -X POST -d "{
-        \\"content\\": \\"✅ *Build Exitoso* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
-      }" "$DISCORD_WEBHOOK"
-    '''
-  }
-  failure {
-    sh '''
-      curl -H "Content-Type: application/json" \
-      -X POST -d "{
-        \\"content\\": \\"❌ *Build Fallido* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
-      }" "$DISCORD_WEBHOOK"
-    '''
+  post {
+    success {
+      sh '''
+        curl -H "Content-Type: application/json" \
+        -X POST -d "{
+          \\"content\\": \\"✅ *Build Exitoso* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
+        }" "$DISCORD_WEBHOOK"
+      '''
+    }
+    failure {
+      sh '''
+        curl -H "Content-Type: application/json" \
+        -X POST -d "{
+          \\"content\\": \\"❌ *Build Fallido* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
+        }" "$DISCORD_WEBHOOK"
+      '''
+    }
   }
 }
