@@ -141,6 +141,29 @@
         chdir: "{{ frontend_dir }}"
       become_user: ubuntu
 
+    - name: Asegurar permisos para Nginx en carpetas del frontend
+      block:
+        - name: Permitir a otros ejecutar /home/ubuntu
+          file:
+            path: /home/ubuntu
+            mode: '0755'
+
+        - name: Permitir a otros ejecutar /home/ubuntu/DevPilot
+          file:
+            path: "{{ app_root }}"
+            mode: '0755'
+
+        - name: Permitir a otros ejecutar /home/ubuntu/DevPilot/frontend
+          file:
+            path: "{{ frontend_dir }}"
+            mode: '0755'
+
+        - name: Permitir lectura recursiva de dist para Nginx
+          file:
+            path: "{{ frontend_dir }}/dist"
+            mode: '0755'
+            recurse: yes
+
     - name: Crear configuración Nginx para DevPilot
       copy:
         dest: /etc/nginx/sites-available/devpilot
@@ -152,8 +175,8 @@
               root {{ frontend_dir }}/dist;
               index index.html;
 
-              location /api/ {
-                  proxy_pass http://127.0.0.1:5512/;
+              location /api {
+                  proxy_pass http://127.0.0.1:5512;
                   proxy_http_version 1.1;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;

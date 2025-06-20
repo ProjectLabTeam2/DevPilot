@@ -60,13 +60,19 @@ resource "aws_security_group" "sg_web" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.my_office_ip , "181.142.123.92/32" , "179.1.224.10/32" ,"34.41.96.53/32"]
+    cidr_blocks = [var.my_office_ip , "181.142.123.92/32" , "179.1.224.10/32" ,"30.60.67.22/32"]
   }
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+  from_port   = 443
+  to_port     = 443
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
