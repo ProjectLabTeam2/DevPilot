@@ -7,21 +7,17 @@ clean-services:
 	sudo rm -f /etc/systemd/system/gunicorn.service
 
 setup-gunicorn:
-	sudo tee /etc/systemd/system/gunicorn.service > /dev/null <<EOF
-	[Unit]
-	Description=Gunicorn for DevPilot
-	After=network.target
-
-	[Service]
-	User=ubuntu
-	WorkingDirectory=$(BACKEND_DIR)
-	EnvironmentFile=$(BACKEND_DIR)/.env
-	ExecStart=$(BACKEND_DIR)/venv/bin/gunicorn -w 3 -b 127.0.0.1:5512 run:app
-	Restart=always
-
-	[Install]
-	WantedBy=multi-user.target
-	EOF
+	printf "[Unit]\n\
+Description=Gunicorn for DevPilot\n\
+After=network.target\n\n\
+[Service]\n\
+User=ubuntu\n\
+WorkingDirectory=$(BACKEND_DIR)\n\
+EnvironmentFile=$(BACKEND_DIR)/.env\n\
+ExecStart=$(BACKEND_DIR)/venv/bin/gunicorn -w 3 -b 127.0.0.1:5512 run:app\n\
+Restart=always\n\n\
+[Install]\n\
+WantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/gunicorn.service > /dev/null
 
 fix-nginx-perms:
 	sudo chmod 755 /home/ubuntu
