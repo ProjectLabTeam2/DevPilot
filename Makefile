@@ -6,28 +6,6 @@ clean-services:
 	sudo systemctl stop gunicorn || true
 	sudo rm -f /etc/systemd/system/gunicorn.service
 
-create-env:
-	cat > .env <<EOF
-	FLASK_ENV=production
-	SECRET_KEY=$(SECRET_KEY)
-	JWT_SECRET_KEY=$(JWT_SECRET_KEY)
-	DB_HOST=$(DB_HOST)
-	DB_USER=$(DB_USER)
-	DB_PASSWORD=$(DB_PASSWORD)
-	DB_NAME=devpilotdb
-	EOF
-
-install-backend:
-	rm -rf venv
-	python3 -m venv venv
-	. venv/bin/activate && \
-	pip install --upgrade pip && \
-	pip install -r requirements.txt && \
-	deactivate
-
-test-backend:
-	. venv/bin/activate && pytest && deactivate
-
 setup-gunicorn:
 	sudo tee /etc/systemd/system/gunicorn.service > /dev/null <<EOF
 	[Unit]
@@ -44,22 +22,6 @@ setup-gunicorn:
 	[Install]
 	WantedBy=multi-user.target
 	EOF
-
-migrate-db:
-	. venv/bin/activate && \
-	FLASK_APP=run.py FLASK_ENV=production \
-	SECRET_KEY=$(SECRET_KEY) \
-	JWT_SECRET_KEY=$(JWT_SECRET_KEY) \
-	DB_HOST=$(DB_HOST) DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_NAME=devpilotdb \
-	flask db upgrade && \
-	deactivate
-
-test-frontend:
-	npm ci
-	npm run test -- --run
-
-build-frontend:
-	npm run build
 
 fix-nginx-perms:
 	sudo chmod 755 /home/ubuntu
