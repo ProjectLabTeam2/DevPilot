@@ -1,10 +1,10 @@
-clean-services:
-	sudo systemctl stop gunicorn || true
-	sudo rm -f /etc/systemd/system/gunicorn.service
-
 clone-repo:
 	rm -rf /home/ubuntu/DevPilot
 	git clone https://github.com/ProjectLabTeam2/DevPilot.git /home/ubuntu/DevPilot
+
+clean-services:
+	sudo systemctl stop gunicorn || true
+	sudo rm -f /etc/systemd/system/gunicorn.service
 
 create-env:
 	cat > .env <<EOF
