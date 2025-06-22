@@ -17,13 +17,19 @@ pipeline {
 
     stage('Limpiar servicios previos') {
       steps {
-        sh 'make clean-services'
+        sh '''
+          sudo systemctl stop gunicorn || true
+          sudo rm -f /etc/systemd/system/gunicorn.service
+        '''
       }
     }
-
+    
     stage('Clonar repositorio') {
       steps {
-        sh 'make clone-repo'
+        sh '''
+          rm -rf ${PROJECT_DIR}
+          git clone https://github.com/ProjectLabTeam2/DevPilot.git ${PROJECT_DIR}
+        '''
       }
     }
 
@@ -31,12 +37,15 @@ pipeline {
       steps {
         dir("${BACKEND_DIR}") {
           sh '''
-            make create-env \
-              SECRET_KEY=${SECRET_KEY} \
-              JWT_SECRET_KEY=${JWT_SECRET_KEY} \
-              DB_HOST=${RDS_ENDPOINT} \
-              DB_USER=${DB_USER} \
-              DB_PASSWORD=${DB_PASSWORD}
+            cat > .env <<EOF
+FLASK_ENV=production
+SECRET_KEY=${SECRET_KEY}
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
+DB_HOST=${RDS_ENDPOINT}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=devpilotdb
+EOF
           '''
         }
       }
@@ -45,7 +54,14 @@ pipeline {
     stage('Backend: Instalar dependencias') {
       steps {
         dir("${BACKEND_DIR}") {
-          sh 'make install-backend'
+          sh 'rm -rf venv'
+          sh 'python3 -m venv venv'
+          sh '''
+            . venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            deactivate
+          '''
         }
       }
     }
@@ -54,14 +70,34 @@ pipeline {
       agent { label 'test-agent' }
       steps {
         dir("${BACKEND_DIR}") {
-          sh 'make test-backend'
+          sh '''
+            . venv/bin/activate
+            pytest
+            deactivate
+          '''
         }
       }
     }
 
     stage('Backend: Crear servicio Gunicorn') {
       steps {
-        sh 'make setup-gunicorn BACKEND_DIR=${BACKEND_DIR}'
+        sh '''
+          sudo tee /etc/systemd/system/gunicorn.service > /dev/null <<EOF
+[Unit]
+Description=Gunicorn for DevPilot
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=${BACKEND_DIR}
+EnvironmentFile=${BACKEND_DIR}/.env
+ExecStart=${BACKEND_DIR}/venv/bin/gunicorn -w 3 -b 127.0.0.1:5512 run:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        '''
       }
     }
 
@@ -69,12 +105,13 @@ pipeline {
       steps {
         dir("${BACKEND_DIR}") {
           sh '''
-            make migrate-db \
-              SECRET_KEY=${SECRET_KEY} \
-              JWT_SECRET_KEY=${JWT_SECRET_KEY} \
-              DB_HOST=${RDS_ENDPOINT} \
-              DB_USER=${DB_USER} \
-              DB_PASSWORD=${DB_PASSWORD}
+            . venv/bin/activate
+            FLASK_APP=run.py FLASK_ENV=production \
+            SECRET_KEY=$SECRET_KEY \
+            JWT_SECRET_KEY=$JWT_SECRET_KEY \
+            DB_HOST=$RDS_ENDPOINT DB_USER=$DB_USER DB_PASSWORD=$DB_PASSWORD DB_NAME=devpilotdb \
+            flask db upgrade
+            deactivate
           '''
         }
       }
@@ -84,7 +121,10 @@ pipeline {
       agent { label 'test-agent' }
       steps {
         dir("${FRONTEND_DIR}") {
-          sh 'make test-frontend'
+          sh '''
+            npm ci
+            npm run test -- --run
+          '''
         }
       }
     }
@@ -92,20 +132,32 @@ pipeline {
     stage('Frontend: Build') {
       steps {
         dir("${FRONTEND_DIR}") {
-          sh 'make build-frontend'
+          sh '''
+            npm run build
+          '''
         }
       }
     }
 
     stage('Frontend: Permisos para Nginx') {
       steps {
-        sh 'make fix-nginx-perms'
+        sh '''
+          sudo chmod 755 /home/ubuntu
+          sudo chmod 755 /home/ubuntu/DevPilot
+          sudo chmod 755 /home/ubuntu/DevPilot/frontend
+          sudo chmod -R 755 /home/ubuntu/DevPilot/frontend/dist
+        '''
       }
     }
 
     stage('Reiniciar servicios') {
       steps {
-        sh 'make restart-services'
+        sh '''
+          sudo systemctl daemon-reexec
+          sudo systemctl daemon-reload
+          sudo systemctl restart gunicorn
+          sudo systemctl restart nginx
+        '''
       }
     }
   }
@@ -115,7 +167,7 @@ pipeline {
       sh '''
         curl -H "Content-Type: application/json" \
         -X POST -d "{
-          \"content\": \"✅ *Build Exitoso* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\nURL: ${BUILD_URL}\"
+          \\"content\\": \\"✅ *Build Exitoso* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
         }" "$DISCORD_WEBHOOK"
       '''
     }
@@ -123,7 +175,7 @@ pipeline {
       sh '''
         curl -H "Content-Type: application/json" \
         -X POST -d "{
-          \"content\": \"❌ *Build Fallido* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\nURL: ${BUILD_URL}\"
+          \\"content\\": \\"❌ *Build Fallido* - Job: ${JOB_NAME} (#${BUILD_NUMBER})\\\\nURL: ${BUILD_URL}\\"
         }" "$DISCORD_WEBHOOK"
       '''
     }
